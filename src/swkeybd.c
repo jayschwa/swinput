@@ -74,7 +74,12 @@ struct swkeybd_device *swkeybd ;
  */
 struct swkeybd_device {
   struct input_dev idev;   /* input device, to push out input  data */
-  
+
+  int    shift_press;
+  int    shift_release;
+
+  int    key_press;
+  int    key_release;
 };
 
 
@@ -101,10 +106,16 @@ int
 swkeybd_read_procmem(char *buf, char **start, off_t offset,
 			 int count, int *eof, void *data)
 {
-  char internal_buf[128];
-  int len;
+  static char internal_buf[128];
+  static int len;
 
-  len=sprintf (internal_buf,"swkeybd read proc\n");
+  len=sprintf (internal_buf,
+	       "swkeybd:%d;%d;%d;%d\n", 
+	       swkeybd->key_press,
+	       swkeybd->key_release,
+	       swkeybd->shift_press,
+	       swkeybd->shift_release);
+  
   
   if(len<=count)
     {
@@ -145,6 +156,13 @@ init_module(void)
     /* tell the features of this input device: fake only keys */
     swkeybd->idev.evbit[0] = BIT(EV_KEY);
 
+    swkeybd->shift_press=0;
+    swkeybd->shift_release=0;
+    swkeybd->key_press=0;
+    swkeybd->key_release=0;
+
+
+
     init_keycodes();
 
     input_register_device(&swkeybd->idev);
@@ -178,24 +196,34 @@ void cleanup_module(void)
 static void 
 fake_key(char c)
 {
-
-    int do_shift=0;
-    printk(KERN_INFO "swkeybd: printing char '%c' (%d)  ---> %d\n", c, c, keycodes[c]);
-
-    if (( c>='A' ) && ( c<='Z'))
-      {
-	do_shift=1;
-	c=c-'A'+'a';
-      }
-		    
-    if (do_shift) 
+  
+  int do_shift=0;
+  printk(KERN_INFO "swkeybd: printing char '%c' (%d)  ---> %d\n", c, c, keycodes[c]);
+  
+  if (( c>='A' ) && ( c<='Z'))
+    {
+      do_shift=1;
+      c=c-'A'+'a';
+    }
+  
+  if (do_shift) 
+    {
       input_report_key(&swkeybd->idev, KEY_LEFTSHIFT, 1); /* keypress */
-
-    input_report_key(&swkeybd->idev, keycodes[c], 1); /* keypress */
-    input_report_key(&swkeybd->idev, keycodes[c], 0); /* release */
-
-    if (do_shift) 
-      input_report_key(&swkeybd->idev, KEY_LEFTSHIFT, 0); /* keypress */
+      swkeybd->shift_press++;
+    }
+  
+  input_report_key(&swkeybd->idev, keycodes[c], 1); /* keypress */
+  swkeybd->key_press++;
+  printk(KERN_INFO "swkeybd: key_press = %d\n", swkeybd->key_press);
+  
+  input_report_key(&swkeybd->idev, keycodes[c], 0); /* release */
+  swkeybd->key_release++;
+  
+  if (do_shift) 
+    {
+      input_report_key(&swkeybd->idev, KEY_LEFTSHIFT, 0); /* keyrelease */
+      swkeybd->shift_release++;
+    }
 }
 
 /*
@@ -311,6 +339,13 @@ fake_esc (char *str)
     {
       press_rel(KEY_UP); 
     }
+  else if (strcmp (str, "clear")==0)
+    {
+      swkeybd->shift_press=0;
+      swkeybd->shift_release=0;
+      swkeybd->key_press=0;
+      swkeybd->key_release=0;
+    }
   else
     ;
 }
@@ -340,18 +375,18 @@ swkeybd_write(struct file *filp, const char *buf, size_t count,
     
     if (count >16) count=16;
     copy_from_user(localbuf, buf, count);
-
+    
     /* scan written data */
     for (i=0; i<count; i++)
       {
+
 	if ( localbuf[i] == '\\')
 	  {
 	    i++;
-	    printk ("esacep sequence : %c\n", localbuf[i]);
+	    printk ("escape sequence : %c\n", localbuf[i]);
 	    fake_key(localbuf[i]);
 	  }
 	    
-
 	if ( localbuf[i] == '[')
 	  {
 	    printk (" [ found\n");

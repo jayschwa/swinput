@@ -96,8 +96,8 @@ int
 swmouse_read_procmem(char *buf, char **start, off_t offset,
 			 int count, int *eof, void *data)
 {
-  char internal_buf[128];
-  int len;
+  static char internal_buf[128];
+  static int len;
 
   len=sprintf (internal_buf,"swmouse:%d;%d;%d;%d\n", swmouse.ups,swmouse.downs,swmouse.lefts,swmouse.rights);
   
