@@ -452,7 +452,8 @@ int init_keycodes()
   /* specials ..... */
   set_keycodes(':', KEY_SEMICOLON);
   set_keycodes(' ', KEY_SPACE);
-  set_keycodes('-', KEY_MINUS);
+  set_keycodes('-', KEY_KPMINUS);
+  set_keycodes('+', KEY_KPPLUS);
   set_keycodes('=', KEY_EQUAL);
   set_keycodes(',', KEY_COMMA);
   set_keycodes('.', KEY_DOT);

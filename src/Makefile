@@ -1,6 +1,6 @@
-CC=gcc296
+CC=gcc-2.95
 
-CFLAGS=-O2 -I/usr/src/linux-2.4.20_orig/include
+CFLAGS=-O2 -I/usr/src/linux/include
 
 OBJS=swmouse.o swkeybd.o
 

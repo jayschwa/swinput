@@ -153,15 +153,17 @@ init_module(void)
   set_bit(BTN_LEFT,  swmouse.idev.keybit); /*  */
   set_bit(BTN_RIGHT, swmouse.idev.keybit); /*  */
   
+  swmouse.idev.keybit[0]=BIT(EV_KEY) | BIT(EV_REL) | BIT(REL_Y) | BIT(REL_X) ;
+
   /* register the device to the input system */
   input_register_device(&swmouse.idev);
 
   /* create the /proc entry */
   create_proc_read_entry("swmouse", 
-				0    /* default mode */,
-				NULL /* parent dir */, 
-				swmouse_read_procmem, 
-				NULL /* client data */);
+			 0    /* default mode */,
+			 NULL /* parent dir */, 
+			 swmouse_read_procmem, 
+			 NULL /* client data */);
   printk(KERN_INFO "swmouse: module regsitred\n");
 
   return retval;
@@ -216,6 +218,7 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
     if (count >10) count=10;
     copy_from_user(localbuf, buf, count);
     
+	
     letter=localbuf[0];
     tmp=&localbuf[1];
     if (!sscanf (tmp, "%d",&nrs)<0)
@@ -223,25 +226,24 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
 	printk(KERN_INFO "swmouse: problems converting %s (tmp=%s   nrs=%d)\n",localbuf, tmp, nrs);
 	return count;
       }
-
+ 
     if ( (nrs<=0) || (nrs>1024) ) nrs=1;
     
-
     switch (letter) {
     case 'u': case 'U': 
-      swmouse.ups++;
+      swmouse.ups+=nrs;
       input_report_rel(&swmouse.idev, REL_Y, 0-nrs);
       break;
     case 'd': case 'D': 
-      swmouse.downs++;
+      swmouse.downs+=nrs;
       input_report_rel(&swmouse.idev, REL_Y, nrs);
       break;
     case 'l': case 'L': 
       input_report_rel(&swmouse.idev, REL_X, 0-nrs);
-      swmouse.lefts++;
+      swmouse.lefts+=nrs;
       break;
     case 'r': case 'R': 
-      swmouse.rights++;
+      swmouse.rights+=nrs;
       input_report_rel(&swmouse.idev, REL_X, nrs);
       break;
     case '0': 
