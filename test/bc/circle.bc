@@ -1,0 +1,36 @@
+scale=10; 
+pi2=4*a(1)*2;
+
+lastx=10
+lasty=0
+
+for (i=2; i<360 ; i+=1) {
+
+  thisx=c(i/360*pi2)*10
+  thisy=s(i/360*pi2)*10
+  
+  x=(lastx-thisx)*10
+  y=(lasty-thisy)*10
+
+
+  if (x < 0) {
+      print "mleft  "
+      print -x
+  }   else   {
+      print "mright  "
+      print x
+  }
+  print "  \n"
+  if (y < 0) {
+      print "mdown  "
+      print -y
+  }   else   {
+      print "mup  "
+      print y
+  }
+  print "\n"
+  lastx=thisx
+  lasty=thisy
+  
+}
+quit
