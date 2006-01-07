@@ -7,6 +7,14 @@ export PATH=${PATH}:/sbin
 MODULES='usbcore usb-uhci input keybdev'
 MYMODULES='swmouse swkeybd'
 
+
+function build_em()
+{
+    cd src 
+    make -C /usr/src/kernel-headers-$(uname -r)/ M=$(pwd) modules modules_install
+    cd ..
+}
+
 function makenod()
 {
     export NAME=$1
@@ -24,7 +32,8 @@ function insert_modules()
 
     for mod in $MYMODULES
     do
-      insmod src/${mod}.o
+      rmmod    $mod
+      modprobe ${mod}
     done
 }
 
@@ -33,6 +42,7 @@ function insert_modules()
 
 if [ "$1" == "start" ];
 then
+    build_em
     insert_modules
     for mod in $MYMODULES
     do

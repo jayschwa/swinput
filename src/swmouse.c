@@ -63,14 +63,18 @@ MODULE_LICENSE ("GPL");
 
 
 struct swmouse_device {
-  /* input device, to push out input  data */
-  struct input_dev idev;
+    /* input device, to push out input  data */
+    struct input_dev idev;
+    
+    /* statistic counters */
+    int ups;
+    int downs;
+    int lefts;
+    int rights;
 
-  /* statistic counters */
-  int ups;
-  int downs;
-  int lefts;
-  int rights;
+    int buttons[10];
+
+
 };
 
 struct swmouse_device swmouse ;
@@ -99,7 +103,19 @@ swmouse_read_procmem(char *buf, char **start, off_t offset,
   static char internal_buf[128];
   static int len;
 
-  len=sprintf (internal_buf,"swmouse:%d;%d;%d;%d\n", swmouse.ups,swmouse.downs,swmouse.lefts,swmouse.rights);
+  len=sprintf (internal_buf,"swmouse:%d;%d;%d;%d  %d;%d;%d   %s %s\n", 
+               swmouse.ups,
+               swmouse.downs,
+               swmouse.lefts,
+               swmouse.rights,
+               
+               swmouse.buttons[1],
+               swmouse.buttons[2],
+               swmouse.buttons[3],
+
+               __DATE__,
+               __TIME__
+               );
   
   if(len<=count)
     {
@@ -139,21 +155,22 @@ init_module(void)
 
   /* zero the mem for the input device struct
    */ 
-  memset(&swmouse.idev, 0, sizeof(struct swmouse_device));
+  memset(&swmouse, 0, sizeof(struct swmouse_device));
   
   /* set the name */
   swmouse.idev.name = "swmouse";
   
   /* tell which keys: only the arrows */
-  set_bit(EV_REL,    swmouse.idev.evbit); /*  */
-  set_bit(REL_X,     swmouse.idev.relbit); /*  */
-  set_bit(REL_Y,     swmouse.idev.relbit); /*  */
+  set_bit(EV_REL,    (void*)&swmouse.idev.evbit);  /*  */
+  set_bit(REL_X,     (void*)&swmouse.idev.relbit); /*  */
+  set_bit(REL_Y,     (void*)&swmouse.idev.relbit); /*  */
   
-  set_bit(EV_KEY,    swmouse.idev.evbit); /*  */
-  set_bit(BTN_LEFT,  swmouse.idev.keybit); /*  */
-  set_bit(BTN_RIGHT, swmouse.idev.keybit); /*  */
-  
-  swmouse.idev.keybit[0]=BIT(EV_KEY) | BIT(EV_REL) | BIT(REL_Y) | BIT(REL_X) ;
+  set_bit(EV_KEY,    (void*)&swmouse.idev.evbit);  /*  */
+  set_bit(BTN_LEFT, (void*)&swmouse.idev.keybit); /*  */        
+  set_bit(BTN_RIGHT, (void*)&swmouse.idev.keybit); /*  */        
+  set_bit(BTN_1, (void*)&swmouse.idev.keybit); /*  */        
+
+  swmouse.idev.keybit[0]=BIT(EV_KEY) | BIT(EV_REL) | BIT(REL_Y) | BIT(REL_X)  | BIT(BTN_1) ;
 
   /* register the device to the input system */
   input_register_device(&swmouse.idev);
@@ -164,12 +181,10 @@ init_module(void)
 			 NULL /* parent dir */, 
 			 swmouse_read_procmem, 
 			 NULL /* client data */);
-  printk(KERN_INFO "swmouse: module regsitred\n");
+  printk(KERN_INFO "swmouse: module registred\n");
 
   return retval;
 }
-
-
 
 
 
@@ -209,16 +224,19 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
 		    loff_t *offp)
 {
     static char localbuf[10];
-    int  i;
     char letter;
     char *tmp;
     int  nrs;
     
+
+    struct input_dev *dev;
+
+    dev = &swmouse.idev;
+
     /* accept 10 bytes at a time, at most */
     if (count >10) count=10;
     copy_from_user(localbuf, buf, count);
     
-	
     letter=localbuf[0];
     tmp=&localbuf[1];
     if (!sscanf (tmp, "%d",&nrs)<0)
@@ -228,24 +246,42 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
       }
  
     if ( (nrs<=0) || (nrs>1024) ) nrs=1;
-    
+
     switch (letter) {
-    case 'u': case 'U': 
-      swmouse.ups+=nrs;
-      input_report_rel(&swmouse.idev, REL_Y, 0-nrs);
-      break;
-    case 'd': case 'D': 
-      swmouse.downs+=nrs;
-      input_report_rel(&swmouse.idev, REL_Y, nrs);
-      break;
-    case 'l': case 'L': 
-      input_report_rel(&swmouse.idev, REL_X, 0-nrs);
-      swmouse.lefts+=nrs;
-      break;
-    case 'r': case 'R': 
-      swmouse.rights+=nrs;
-      input_report_rel(&swmouse.idev, REL_X, nrs);
-      break;
+       case 'u': case 'U': 
+           swmouse.ups+=nrs;
+           input_report_rel(dev, REL_Y, 0-nrs);
+           break;
+       case 'd': case 'D': 
+           swmouse.downs+=nrs;
+           input_report_rel(dev, REL_Y, nrs);
+           break;
+       case 'l': case 'L': 
+           input_report_rel(dev, REL_X, 0-nrs);
+           swmouse.lefts+=nrs;
+           break;
+       case 'r': case 'R': 
+           swmouse.rights+=nrs;
+           input_report_rel(dev, REL_X, nrs);
+           break;
+           
+       case 'b': 
+           if ( ( nrs > 0 ) && ( nrs < 6 ))
+               {
+                   swmouse.buttons[nrs]++;
+                   printk ("fake button %d\n", 
+                           nrs);
+                   input_report_key(dev, BTN_1, nrs);
+                   break;
+               }
+       case 'B': 
+           if ( ( nrs > 0 ) && ( nrs < 6 ))
+               {
+                   swmouse.buttons[nrs]++;
+                   input_report_key(dev, BTN_1, nrs);
+                   break;
+               }
+           
     case '0': 
       swmouse.rights=0;
       swmouse.lefts=0;
@@ -255,6 +291,7 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
     default:
       ;
     }
+    input_sync(dev);
     return count;
 }
 
