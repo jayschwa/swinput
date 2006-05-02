@@ -57,14 +57,22 @@
 #include <linux/proc_fs.h>
 
 
+#define HIGHEST_RESOLUTION 1600
+
 MODULE_LICENSE ("GPL");
 
+#define XMIN_NOMINAL 0
+#define XMAX_NOMINAL 1280
+#define YMIN_NOMINAL 0
+#define YMAX_NOMINAL 800
 
 struct swmouse_device {
   /* input device, to push out input  data */
   struct input_dev *idev;
 
   /* statistic counters */
+  int fixed_x;
+  int fixed_y;
   int ups;
   int downs;
   int lefts;
@@ -101,7 +109,10 @@ swmouse_read_procmem(char *buf, char **start, off_t offset,
   static char internal_buf[128];
   static int len;
 
-  len=sprintf (internal_buf,"swmouse:%d;%d;%d;%d\n", swmouse.ups,swmouse.downs,swmouse.lefts,swmouse.rights);
+  len=sprintf (internal_buf,"swmouse:%d;%d;%d;%d,%d,%d\n", 
+	       swmouse.ups,swmouse.downs,
+	       swmouse.lefts,swmouse.rights,
+	       swmouse.fixed_x,swmouse.fixed_y);
   
   if(len<=count)
     {
@@ -154,27 +165,9 @@ init_module(void)
   swmouse.idev->relbit[0] = BIT(REL_Y) | BIT(REL_X) ;
   swmouse.idev->keybit[LONG(BTN_LEFT)] = BIT(BTN_LEFT) | BIT(BTN_MIDDLE) | BIT(BTN_RIGHT);
   swmouse.idev->keybit[LONG(BTN_TOUCH)] = BIT(BTN_TOUCH);
-  input_set_abs_params(swmouse.idev, ABS_X, 0, 1024, 0, 0);
-  input_set_abs_params(swmouse.idev, ABS_Y, 0, 1024, 0, 0);
 
-  /* tell which keys: only the arrows */
-  /*
-  set_bit(EV_REL,    swmouse.idev->evbit);
-  set_bit(EV_ABS,    swmouse.idev->evbit);
-  set_bit(REL_X,     swmouse.idev->relbit);
-  set_bit(REL_Y,     swmouse.idev->relbit);
-  set_bit(ABS_X,     swmouse.idev->absbit);
-  set_bit(ABS_Y,     swmouse.idev->absbit);
-  */
-
-  /*
-  set_bit(EV_KEY,    swmouse.idev->evbit); 
-  set_bit(BTN_LEFT,  swmouse.idev->keybit);
-  set_bit(BTN_RIGHT, swmouse.idev->keybit);
-  swmouse.idev->evbit[0]  = BIT(EV_REL) | BIT(EV_ABS) ;
-  swmouse.idev->absbit[0] = BIT(ABS_Y) | BIT(ABS_X) ;
-  swmouse.idev->relbit[0] = BIT(REL_Y) | BIT(REL_X) ;
-  */
+  input_set_abs_params(swmouse.idev, ABS_X, XMIN_NOMINAL, XMAX_NOMINAL, 0, 0);
+  input_set_abs_params(swmouse.idev, ABS_Y, YMIN_NOMINAL, YMAX_NOMINAL, 0, 0);
 
   /* register the device to the input system */
   retval = input_register_device(swmouse.idev);
@@ -216,7 +209,7 @@ cleanup_module(void)
 
 int swmouse_open(struct inode *inode, struct file *filp)
 {
-  printk(KERN_INFO "swmouse: open\n");
+/*   printk(KERN_INFO "swmouse: open\n"); */
   return 0; /* Ok */
 }    
 
@@ -224,23 +217,23 @@ int swmouse_open(struct inode *inode, struct file *filp)
 
 int swmouse_release(struct inode *inode, struct file *filp)
 {
-  printk(KERN_INFO "swmouse: releas\n");
+  /*   printk(KERN_INFO "swmouse: releas\n"); */
     return 0;
 }
 
 
 int swmouse_open_simple(struct input_dev *dev)
 {
-  printk(KERN_INFO "swmouse: open_simple\n");
-    return 0; /* Ok */
+/*   printk(KERN_INFO "swmouse: open_simple\n"); */
+  return 0; /* Ok */
 }    
 
 
 
 void swmouse_release_simple(struct input_dev *dev)
 {
-  printk(KERN_INFO "swmouse: release_simple\n");
-    return ;
+/*   printk(KERN_INFO "swmouse: release_simple\n"); */
+  return ;
 }
 
 
@@ -249,61 +242,112 @@ void swmouse_release_simple(struct input_dev *dev)
 ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
 		    loff_t *offp)
 {
-    static char localbuf[10];
+  #define BUF_SIZE 32
+    static char localbuf[BUF_SIZE];
     int  i;
     char letter;
     char *tmp;
     int  nrs;
-    int ret;
+    int direction=-1;
+    int is_abs = 0;
+    int pix=0;
 
-    /* accept 10 bytes at a time, at most */
-    if (count >10) count=10;
+    /* accept BUF_SIZE bytes at a time, at most */
+    if (count >BUF_SIZE) count=BUF_SIZE;
     copy_from_user(localbuf, buf, count);
     
 
+    /* Remove blanks ...*/
+    while (tmp[0]==' ') tmp++;
+
     letter=localbuf[0];
+
+    /* Go to next character */
     tmp=&localbuf[1];
+    
+    /* Remove blanks ...*/
+    while (tmp[0]==' ') tmp++;
+
+    /* Remove "=" if any */
+    if (tmp[0]=='=')
+      {
+	tmp++;
+      }
+    
     if (!sscanf (tmp, "%d",&nrs)<0)
       {
 	printk(KERN_INFO "swmouse: problems converting %s (tmp=%s   nrs=%d)\n",localbuf, tmp, nrs);
 	return count;
       }
  
-    if ( (nrs<=0) || (nrs>1024) ) nrs=1;
+    if ( (nrs<0) || (nrs>HIGHEST_RESOLUTION) ) nrs=1;
     
-    printk(KERN_INFO "swmouse: nrs=%d letter=%c\n", nrs, letter);
-
     switch (letter) {
     case 'u': case 'U': 
       swmouse.ups+=nrs;
-      input_report_rel(swmouse.idev, REL_Y, 0-nrs);
-      printk(KERN_INFO "swmouse: input_report_rel(%lu,%d,%d) \n", swmouse.idev, REL_Y, 0-nrs);
-
-      printk(KERN_INFO "swmouse: synced \n");
-
+      direction = REL_Y;
+      pix = 0-nrs;
       break;
     case 'd': case 'D': 
       swmouse.downs+=nrs;
-      input_report_rel(swmouse.idev, REL_Y, nrs);
+      direction = REL_Y;
+      pix = nrs;
       break;
     case 'l': case 'L': 
-      input_report_rel(swmouse.idev, REL_X, 0-nrs);
+      direction = REL_X;
+      pix = 0-nrs;
       swmouse.lefts+=nrs;
       break;
     case 'r': case 'R': 
       swmouse.rights+=nrs;
-      input_report_rel(swmouse.idev, ABS_X, nrs); 
+      direction = REL_X;
+      pix = nrs;
+      break;
+    case 'x': case 'X': 
+      swmouse.fixed_x++;
+      is_abs=1;
+      direction = ABS_X;
+      pix = nrs;
+      break;
+    case 'y': case 'Y': 
+      swmouse.fixed_y++;
+      is_abs=1;
+      direction = ABS_Y;
+      pix = nrs;
       break;
     case '0': 
+      swmouse.fixed_x=0;
+      swmouse.fixed_y=0;
       swmouse.rights=0;
       swmouse.lefts=0;
       swmouse.downs=0;
       swmouse.ups=0;
+      pix=0;
       break;
     default:
       ;
     }
-    input_sync(swmouse.idev);
+
+    if ( direction!=-1 )
+      {
+	if (is_abs)
+	  {
+	    printk(KERN_INFO "input_report_abs(%ul,%d,%d)\n",
+		   swmouse.idev, direction, pix);
+	    input_report_abs(swmouse.idev, direction, 0);
+	    input_sync(swmouse.idev);
+	    input_sync(swmouse.idev);
+	    input_report_abs(swmouse.idev, direction, pix);
+	  }
+	else
+	  {
+	    printk(KERN_INFO "input_report_rel(%ul,%d,%d)\n",
+		   swmouse.idev, direction, pix);
+	    input_report_rel(swmouse.idev, direction, pix); 
+	  }
+	input_sync(swmouse.idev);
+      }
+
     return count;
 }
 
@@ -315,3 +359,11 @@ struct file_operations swmouse_file_operations = {
 	.open    =    swmouse_open,
 	.release =    swmouse_release,
 };
+
+
+/* Test function:
+     xy() {   echo "x $1" > /dev/swmouse ; echo "y $2" > /dev/swmouse ; sleep 2 ; XPOS=$(/home/hesa/gnu/xnee/cnee/test/src/xgetter  -mprx) ; YPOS=$( /home/hesa/gnu/xnee/cnee/test/src/xgetter  -mpry) ; echo "${1}x${2} ==> ${XPOS}x${YPOS}" ; }
+   
+
+   xy 1 2 
+*/
