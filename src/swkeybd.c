@@ -1,10 +1,10 @@
 /*****
  *       swinput 
  *                                                                   
- * swkeybd.c fakes a keyboard using the Linux Input Subsystem by reading
+ * swkeybd fakes a keyboard using the Linux Input Subsystem by reading
  * from a device file
  *                                                                   
- *        Copyright (C) 1999, 2000, 2001, 2002, 2003, 2005 Henrik Sandklef                    
+ *        Copyright (C) 1999, 2000, 2001, 2002, 2003 Henrik Sandklef                    
  *                                                                   
  * This program is free software; you can redistribute it and/or     
  * modify it under the terms of the GNU General Public License       
@@ -24,17 +24,12 @@
  ****/
 
 /*
- *  This is to be seen as a hack to test xnee
- *  .... if someone wants to use it, please do
- *  ..... contact me if you have any questions
+ *  swkeybd.c, fakes a keyboard using Linux Input System
+ *     heavily based on
+ *         idiom.c 
+ *     which is heavily based on on usbmouse.c
  *
- *
- *  swinput is heavily based on
- *         idiom.c and usbmouse.c
- *
- *  so the following has played a big part in this driver
- *         Alessandro Rubini <rubini@gnu.org>
- *         Vojtech Pavlik <vojtech@suse.cz>
+ *  Copyright (c) 2003,2004,2005,2006 Henrik Sandklef <hesa@gnu.org>
  *
  */
 
@@ -47,26 +42,29 @@
 #endif
 
 #include <linux/module.h>
-#include <linux/init.h>
+
+#include <linux/kernel.h> /* printk() */
+#include <linux/slab.h> /* kmalloc() */
+
+/* usb stuff */
 #include <linux/input.h>
 #include <linux/usb.h>
-#include <linux/miscdevice.h>
-#include <linux/proc_fs.h>
+
+/* miscdevice stuff */
 #include <linux/poll.h>
+#include <linux/miscdevice.h>
+#include <asm/uaccess.h>
+
+#include <linux/proc_fs.h>
 
 MODULE_LICENSE ("GPL");
 
-#define SWINPUT_SET_BIT(a,b) set_bit(a,(void*)b);
-
 static char keycodes[512] ;
 
-struct swkeybd_device *swkeybd ;
-
-static int set_keycodes(int in, int out);
-
-static int init_keycodes(void);
+struct swkeybd_device swkeybd ;
 
 
+int init_keycodes(void);
 
 
 /*
@@ -74,7 +72,7 @@ static int init_keycodes(void);
  * mouse device plugged in the USB bus
  */
 struct swkeybd_device {
-  struct input_dev idev;   /* input device, to push out input  data */
+  struct input_dev *idev;   /* input device, to push out input  data */
 
   int    shift_press;
   int    shift_release;
@@ -112,10 +110,10 @@ swkeybd_read_procmem(char *buf, char **start, off_t offset,
 
   len=sprintf (internal_buf,
 	       "swkeybd:%d;%d;%d;%d\n", 
-	       swkeybd->key_press,
-	       swkeybd->key_release,
-	       swkeybd->shift_press,
-	       swkeybd->shift_release);
+	       swkeybd.key_press,
+	       swkeybd.key_release,
+	       swkeybd.shift_press,
+	       swkeybd.shift_release);
   
   
   if(len<=count)
@@ -133,12 +131,12 @@ swkeybd_read_procmem(char *buf, char **start, off_t offset,
 
 
 
-static int __init
-swkeybd_init(void)
+int 
+init_module(void)
 {
     int retval;
 
-    printk(KERN_INFO "swkeybd: init\n");
+    printk(KERN_INFO "swkeybd: 1\n");
     retval = misc_register(&swkeybd_misc);
     if (retval!=0)
       {
@@ -147,26 +145,27 @@ swkeybd_init(void)
 	return retval;
       }
 
+    swkeybd.idev = input_allocate_device();
 
 
-    swkeybd = kmalloc(sizeof(struct swkeybd_device), GFP_KERNEL);
-    if (!swkeybd) 
-      return -ENOMEM;
-    memset(swkeybd, 0, sizeof(*swkeybd));
+    /* set the name */
+    swkeybd.idev->name    = "swkeybd";
+    swkeybd.idev->id.vendor  = 0x00;
+    swkeybd.idev->id.product = 0x00;
+    swkeybd.idev->id.version = 0x00;
 
     /* tell the features of this input device: fake only keys */
-    swkeybd->idev.evbit[0] = BIT(EV_KEY);
+    swkeybd.idev->evbit[0] = BIT(EV_KEY);
 
-    swkeybd->shift_press=0;
-    swkeybd->shift_release=0;
-    swkeybd->key_press=0;
-    swkeybd->key_release=0;
-
+    swkeybd.shift_press=0;
+    swkeybd.shift_release=0;
+    swkeybd.key_press=0;
+    swkeybd.key_release=0;
 
 
     init_keycodes();
 
-    input_register_device(&swkeybd->idev);
+    input_register_device(swkeybd.idev);
 
     create_proc_read_entry("swkeybd", 
 			   0    /* default mode */,
@@ -174,18 +173,15 @@ swkeybd_init(void)
 			   swkeybd_read_procmem, 
 			   NULL /* client data */);    /* announce yourself */
 
+
     return retval;
 }
 
-
-static void 
-swkeybd_cleanup(void)
+void cleanup_module(void)
 {
 
-    input_unregister_device(&swkeybd->idev);
-    kfree(swkeybd);
+    input_unregister_device(swkeybd.idev);
     printk(KERN_INFO "swkeybd: closing misc device\n");
-
 
     misc_deregister(&swkeybd_misc);
 }
@@ -200,7 +196,7 @@ fake_key(char c)
 {
   
   int do_shift=0;
-/*   printk(KERN_INFO "swkeybd: printing char '%c' (%d)  ---> %d\n", c, c, keycodes[c]); */
+  printk(KERN_INFO "swkeybd: printing char '%c' (%d)  ---> %d\n", c, c, keycodes[c]);
   
   if (( c>='A' ) && ( c<='Z'))
     {
@@ -210,21 +206,21 @@ fake_key(char c)
   
   if (do_shift) 
     {
-      input_report_key(&swkeybd->idev, KEY_LEFTSHIFT, 1); /* keypress */
-      swkeybd->shift_press++;
+      input_report_key(swkeybd.idev, KEY_LEFTSHIFT, 1); /* keypress */
+      swkeybd.shift_press++;
     }
   
-  input_report_key(&swkeybd->idev, keycodes[(int)c], 1); /* keypress */
-  swkeybd->key_press++;
-/*   printk(KERN_INFO "swkeybd: key_press = %d\n", swkeybd->key_press); */
+  input_report_key(swkeybd.idev, keycodes[c], 1); /* keypress */
+  swkeybd.key_press++;
+  printk(KERN_INFO "swkeybd: key_press = %d\n", swkeybd.key_press);
   
-  input_report_key(&swkeybd->idev, keycodes[(int)c], 0); /* release */
-  swkeybd->key_release++;
+  input_report_key(swkeybd.idev, keycodes[c], 0); /* release */
+  swkeybd.key_release++;
   
   if (do_shift) 
     {
-      input_report_key(&swkeybd->idev, KEY_LEFTSHIFT, 0); /* keyrelease */
-      swkeybd->shift_release++;
+      input_report_key(swkeybd.idev, KEY_LEFTSHIFT, 0); /* keyrelease */
+      swkeybd.shift_release++;
     }
 }
 
@@ -248,8 +244,8 @@ int swkeybd_release(struct inode *inode, struct file *filp)
 int 
 press_rel (int key)
 {
-  input_report_key(&swkeybd->idev, key, 1); /* keypress */
-  input_report_key(&swkeybd->idev, key, 0); /* release */
+  input_report_key(swkeybd.idev, key, 1); /* keypress */
+  input_report_key(swkeybd.idev, key, 0); /* release */
   return 0;
 }
 
@@ -257,33 +253,27 @@ press_rel (int key)
 int
 fake_esc (char *str)
 {
-  printk ("fake_esc \"%s\"\n", str); 
+  printk ("fake_esc \"%s\"\n", str);
   if (str[0]=='F')
     {
       int key;
-
-      printk("   F ...");
-
       if (strcmp(str,"F1")==0)
-	{
-	  key=KEY_F1;
-	  printk("   F ...");
-	}
-      else if (strcmp(str,"F2")==0)
+	key=KEY_F1;
+      if (strcmp(str,"F2")==0)
 	key=KEY_F2;
-      else if (strcmp(str,"F3")==0)
+      if (strcmp(str,"F3")==0)
 	key=KEY_F3;
-      else if (strcmp(str,"F4")==0)
+      if (strcmp(str,"F4")==0)
 	key=KEY_F4;
-      else if (strcmp(str,"F5")==0)
+      if (strcmp(str,"F5")==0)
 	key=KEY_F5;
-      else if (strcmp(str,"F6")==0)
+      if (strcmp(str,"F6")==0)
 	key=KEY_F6;
-      else if (strcmp(str,"F7")==0)
+      if (strcmp(str,"F7")==0)
 	key=KEY_F7;
-      else if (strcmp(str,"F8")==0)
+      if (strcmp(str,"F8")==0)
 	key=KEY_F8;
-      else if (strcmp(str,"F9")==0)
+      if (strcmp(str,"F9")==0)
 	key=KEY_F9;
       else if (strcmp(str,"F10")==0)
 	key=KEY_F10;
@@ -315,6 +305,10 @@ fake_esc (char *str)
   else if (strcmp (str, "BACKSPACE")==0)
     {
       press_rel(KEY_BACKSPACE); 
+    }
+  else if (strcmp (str, "ENTER")==0)
+    {
+      press_rel(KEY_ENTER); 
     }
   else if (strcmp (str, "SPACE")==0)
     {
@@ -348,39 +342,16 @@ fake_esc (char *str)
     {
       press_rel(KEY_UP); 
     }
-  else if (strcmp (str, "CONTROL_DOWN")==0)
-    {
-	printk(KERN_INFO "swkeybd: faking control down\n");
-	input_report_key(&swkeybd->idev, KEY_LEFTCTRL, 1); /* keypress */
-    }
-  else if (strcmp (str, "CONTROL_UP")==0)
-  {
-      printk(KERN_INFO "swkeybd: faking control up\n");
-      input_report_key(&swkeybd->idev, KEY_LEFTCTRL, 0); /* release */
-  }
-  else if (strcmp (str, "SHIFT_DOWN")==0)
-    {
-      input_report_key(&swkeybd->idev, KEY_LEFTSHIFT, 1); /* keypress */
-    }
-  else if (strcmp (str, "SHIFT_UP")==0)
-    {
-      input_report_key(&swkeybd->idev, KEY_LEFTSHIFT, 0); /* release */
-    }
-  else if (strcmp (str, "ENTER")==0)
-    {
-      press_rel(KEY_ENTER); 
-    }
   else if (strcmp (str, "clear")==0)
     {
-      swkeybd->shift_press=0;
-      swkeybd->shift_release=0;
-      swkeybd->key_press=0;
-      swkeybd->key_release=0;
+      swkeybd.shift_press=0;
+      swkeybd.shift_release=0;
+      swkeybd.key_press=0;
+      swkeybd.key_release=0;
     }
   else
-    {
-      ;
-    }
+    ;
+
   return 0;
 }
 
@@ -398,14 +369,14 @@ ssize_t
 swkeybd_write(struct file *filp, const char *buf, size_t count,
 		    loff_t *offp)
 {
-/*   struct swkeybd_device *swkeybd = filp->private_data; */
+    struct swkeybd_device *swkeybd = filp->private_data;
     static char localbuf[16];
     static char escapebuf[16];
-/*     struct urb urb; */
+    struct urb urb;
     int i;
     int idx=0;
     int found=0;
-/*     int toggle=0; */
+    int toggle=0;
     
     if (count >16) count=16;
     copy_from_user(localbuf, buf, count);
@@ -417,13 +388,13 @@ swkeybd_write(struct file *filp, const char *buf, size_t count,
 	if ( localbuf[i] == '\\')
 	  {
 	    i++;
-/* 	    printk ("escape sequence : %c\n", localbuf[i]); */
+	    printk ("escape sequence : %c\n", localbuf[i]);
 	    fake_key(localbuf[i]);
 	  }
 	    
 	if ( localbuf[i] == '[')
 	  {
-  	    printk (" [ found\n");  
+	    printk (" [ found\n");
 	    found=1;
 	  } 	
 	else if ( localbuf[i] == ']')
@@ -431,9 +402,9 @@ swkeybd_write(struct file *filp, const char *buf, size_t count,
 	    found=0;
 	    escapebuf[idx]='\0';
 	    escapebuf[idx++]='\0';
-  	    printk (" ]  found\n");  
-  	    printk ("calling fake on string idx=%d   %s\n", idx,  
-  		    escapebuf);  
+	    printk (" ]  found\n");
+	    printk ("calling fake on string idx=%d   %c%c%c\n", idx, 
+		    escapebuf[0], escapebuf[1], escapebuf[2]);
 	    fake_esc (escapebuf);
 	    idx=0;
 	  }
@@ -441,7 +412,7 @@ swkeybd_write(struct file *filp, const char *buf, size_t count,
 	  {
 	    if (found)
 	      {
-/* 		printk ("adding %c at %d\n", localbuf[i], idx); */
+		printk ("adding %c at %d\n", localbuf[i], idx);
 		escapebuf[idx++]=localbuf[i];
 	      }
 	    else
@@ -467,17 +438,15 @@ struct file_operations swkeybd_file_operations = {
 
 
 
-static int 
+int 
 set_keycodes(int in, int out)
 {
   keycodes[in]=out ;
-  SWINPUT_SET_BIT (out, &swkeybd->idev.keybit);
-  return 0;
+  set_bit (out, swkeybd.idev->keybit);
 }
 
 
-static int 
-init_keycodes(void)
+int init_keycodes(void)
 {
   memset (keycodes,0, 512);
 
@@ -532,60 +501,53 @@ init_keycodes(void)
 
 
   /* just set them....*/
-  SWINPUT_SET_BIT (KEY_SEMICOLON,  &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_SPACE,      &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_LEFTBRACE,  &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_RIGHTBRACE, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_BACKSPACE,  &swkeybd->idev.keybit);
+  set_bit (KEY_SEMICOLON,  swkeybd.idev->keybit);
+  set_bit (KEY_SPACE,      swkeybd.idev->keybit);
+  set_bit (KEY_LEFTBRACE,  swkeybd.idev->keybit);
+  set_bit (KEY_RIGHTBRACE, swkeybd.idev->keybit);
+  set_bit (KEY_BACKSPACE,  swkeybd.idev->keybit);
 
-  SWINPUT_SET_BIT (KEY_ENTER,  &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_ESC,  &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_TAB,  &swkeybd->idev.keybit);
+  set_bit (KEY_ENTER,  swkeybd.idev->keybit);
+  set_bit (KEY_ESC,  swkeybd.idev->keybit);
+  set_bit (KEY_TAB,  swkeybd.idev->keybit);
 
-  SWINPUT_SET_BIT (KEY_LEFTSHIFT, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_RIGHTSHIFT, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_LEFTCTRL, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_RIGHTCTRL, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_LEFTALT, &swkeybd->idev.keybit);
+  set_bit (KEY_LEFTSHIFT, swkeybd.idev->keybit);
+  set_bit (KEY_RIGHTSHIFT, swkeybd.idev->keybit);
+  set_bit (KEY_LEFTCTRL, swkeybd.idev->keybit);
+  set_bit (KEY_RIGHTCTRL, swkeybd.idev->keybit);
+  set_bit (KEY_LEFTALT, swkeybd.idev->keybit);
 
-  SWINPUT_SET_BIT (KEY_CAPSLOCK, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_APOSTROPHE, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_GRAVE, &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_SLASH, &swkeybd->idev.keybit);
+  set_bit (KEY_CAPSLOCK, swkeybd.idev->keybit);
+  set_bit (KEY_APOSTROPHE, swkeybd.idev->keybit);
+  set_bit (KEY_GRAVE, swkeybd.idev->keybit);
+  set_bit (KEY_SLASH, swkeybd.idev->keybit);
 
-  SWINPUT_SET_BIT (KEY_F1 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F2 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F3 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F4 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F5 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F6 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F7 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F8 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F9 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F10 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F11 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F12 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F13 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F14 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F15 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F16 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F17 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F18 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F19 , &swkeybd->idev.keybit);
-  SWINPUT_SET_BIT (KEY_F20 , &swkeybd->idev.keybit);
+  set_bit (KEY_F1 , swkeybd.idev->keybit);
+  set_bit (KEY_F2 , swkeybd.idev->keybit);
+  set_bit (KEY_F3 , swkeybd.idev->keybit);
+  set_bit (KEY_F4 , swkeybd.idev->keybit);
+  set_bit (KEY_F5 , swkeybd.idev->keybit);
+  set_bit (KEY_F6 , swkeybd.idev->keybit);
+  set_bit (KEY_F7 , swkeybd.idev->keybit);
+  set_bit (KEY_F8 , swkeybd.idev->keybit);
+  set_bit (KEY_F9 , swkeybd.idev->keybit);
+  set_bit (KEY_F10 , swkeybd.idev->keybit);
+  set_bit (KEY_F11 , swkeybd.idev->keybit);
+  set_bit (KEY_F12 , swkeybd.idev->keybit);
+  set_bit (KEY_F13 , swkeybd.idev->keybit);
+  set_bit (KEY_F14 , swkeybd.idev->keybit);
+  set_bit (KEY_F15 , swkeybd.idev->keybit);
+  set_bit (KEY_F16 , swkeybd.idev->keybit);
+  set_bit (KEY_F17 , swkeybd.idev->keybit);
+  set_bit (KEY_F18 , swkeybd.idev->keybit);
+  set_bit (KEY_F19 , swkeybd.idev->keybit);
+  set_bit (KEY_F20 , swkeybd.idev->keybit);
 
-  SWINPUT_SET_BIT ( KEY_LEFT,	&swkeybd->idev.keybit);
-  SWINPUT_SET_BIT ( KEY_RIGHT,	&swkeybd->idev.keybit);
-  SWINPUT_SET_BIT ( KEY_UP,	&swkeybd->idev.keybit);
-  SWINPUT_SET_BIT ( KEY_DOWN ,&swkeybd->idev.keybit);
+  set_bit ( KEY_LEFT,	swkeybd.idev->keybit);
+  set_bit ( KEY_RIGHT,	swkeybd.idev->keybit);
+  set_bit ( KEY_UP,	swkeybd.idev->keybit);
+  set_bit ( KEY_DOWN ,swkeybd.idev->keybit);
 
-  SWINPUT_SET_BIT ( KEY_LEFTBRACE,&swkeybd->idev.keybit);
-  SWINPUT_SET_BIT ( KEY_RIGHTBRACE,&swkeybd->idev.keybit);
-  return 0;
+set_bit ( KEY_LEFTBRACE,swkeybd.idev->keybit);
+set_bit ( KEY_RIGHTBRACE,swkeybd.idev->keybit);
 }
-
-
-
-module_init(swkeybd_init);
-module_exit(swkeybd_cleanup);
-

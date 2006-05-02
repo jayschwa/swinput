@@ -29,9 +29,7 @@
  *         idiom.c 
  *     which is heavily based on on usbmouse.c
  *
- *  Copyright (c) 2003 Henrik Sandklef <hesa@gnu.org>
- *  Copyright (c) 2000 Alessandro Rubini <rubini@gnu.org>
- *  Copyright (c) 1999 Vojtech Pavlik <vojtech@suse.cz>
+ *  Copyright (c) 2003,2004,2005,2006 Henrik Sandklef <hesa@gnu.org>
  *
  */
 
@@ -63,24 +61,20 @@ MODULE_LICENSE ("GPL");
 
 
 struct swmouse_device {
-    /* input device, to push out input  data */
-    struct input_dev idev;
-    
-    /* statistic counters */
-    int ups;
-    int downs;
-    int lefts;
-    int rights;
+  /* input device, to push out input  data */
+  struct input_dev *idev;
 
-    int buttons[10];
-
-
+  /* statistic counters */
+  int ups;
+  int downs;
+  int lefts;
+  int rights;
 };
 
 struct swmouse_device swmouse ;
 
 
-struct file_operations swmouse_file_operations;
+struct file_operations swmouse_file_operations; 
 
 struct miscdevice swmouse_misc = {
     minor:      MISC_DYNAMIC_MINOR,
@@ -89,6 +83,10 @@ struct miscdevice swmouse_misc = {
 };
 
 
+
+int swmouse_open_simple(struct input_dev *dev);
+
+void swmouse_release_simple(struct input_dev *dev);
 
 /*
  *   Name:        swmouse_read_procmem
@@ -103,19 +101,7 @@ swmouse_read_procmem(char *buf, char **start, off_t offset,
   static char internal_buf[128];
   static int len;
 
-  len=sprintf (internal_buf,"swmouse:%d;%d;%d;%d  %d;%d;%d   %s %s\n", 
-               swmouse.ups,
-               swmouse.downs,
-               swmouse.lefts,
-               swmouse.rights,
-               
-               swmouse.buttons[1],
-               swmouse.buttons[2],
-               swmouse.buttons[3],
-
-               __DATE__,
-               __TIME__
-               );
+  len=sprintf (internal_buf,"swmouse:%d;%d;%d;%d\n", swmouse.ups,swmouse.downs,swmouse.lefts,swmouse.rights);
   
   if(len<=count)
     {
@@ -153,27 +139,46 @@ init_module(void)
       return retval;
     }
 
-  /* zero the mem for the input device struct
-   */ 
-  memset(&swmouse, 0, sizeof(struct swmouse_device));
+  swmouse.idev = input_allocate_device();
   
   /* set the name */
-  swmouse.idev.name = "swmouse";
-  
-  /* tell which keys: only the arrows */
-  set_bit(EV_REL,    (void*)&swmouse.idev.evbit);  /*  */
-  set_bit(REL_X,     (void*)&swmouse.idev.relbit); /*  */
-  set_bit(REL_Y,     (void*)&swmouse.idev.relbit); /*  */
-  
-  set_bit(EV_KEY,    (void*)&swmouse.idev.evbit);  /*  */
-  set_bit(BTN_LEFT, (void*)&swmouse.idev.keybit); /*  */        
-  set_bit(BTN_RIGHT, (void*)&swmouse.idev.keybit); /*  */        
-  set_bit(BTN_1, (void*)&swmouse.idev.keybit); /*  */        
+  swmouse.idev->name    = "swmouse";
+  swmouse.idev->id.vendor  = 0x00;
+  swmouse.idev->id.product = 0x00;
+  swmouse.idev->id.version = 0x00;
 
-  swmouse.idev.keybit[0]=BIT(EV_KEY) | BIT(EV_REL) | BIT(REL_Y) | BIT(REL_X)  | BIT(BTN_1) ;
+  swmouse.idev->open  = swmouse_open_simple;
+  swmouse.idev->close = swmouse_release_simple;
+  
+  swmouse.idev->evbit[0]  = BIT(EV_KEY) | BIT(EV_REL) | BIT(EV_ABS) ;
+  swmouse.idev->relbit[0] = BIT(REL_Y) | BIT(REL_X) ;
+  swmouse.idev->keybit[LONG(BTN_LEFT)] = BIT(BTN_LEFT) | BIT(BTN_MIDDLE) | BIT(BTN_RIGHT);
+  swmouse.idev->keybit[LONG(BTN_TOUCH)] = BIT(BTN_TOUCH);
+  input_set_abs_params(swmouse.idev, ABS_X, 0, 1024, 0, 0);
+  input_set_abs_params(swmouse.idev, ABS_Y, 0, 1024, 0, 0);
+
+  /* tell which keys: only the arrows */
+  /*
+  set_bit(EV_REL,    swmouse.idev->evbit);
+  set_bit(EV_ABS,    swmouse.idev->evbit);
+  set_bit(REL_X,     swmouse.idev->relbit);
+  set_bit(REL_Y,     swmouse.idev->relbit);
+  set_bit(ABS_X,     swmouse.idev->absbit);
+  set_bit(ABS_Y,     swmouse.idev->absbit);
+  */
+
+  /*
+  set_bit(EV_KEY,    swmouse.idev->evbit); 
+  set_bit(BTN_LEFT,  swmouse.idev->keybit);
+  set_bit(BTN_RIGHT, swmouse.idev->keybit);
+  swmouse.idev->evbit[0]  = BIT(EV_REL) | BIT(EV_ABS) ;
+  swmouse.idev->absbit[0] = BIT(ABS_Y) | BIT(ABS_X) ;
+  swmouse.idev->relbit[0] = BIT(REL_Y) | BIT(REL_X) ;
+  */
 
   /* register the device to the input system */
-  input_register_device(&swmouse.idev);
+  retval = input_register_device(swmouse.idev);
+  printk(KERN_INFO "swmouse: module regsitred  (%d)\n", retval);
 
   /* create the /proc entry */
   create_proc_read_entry("swmouse", 
@@ -181,10 +186,13 @@ init_module(void)
 			 NULL /* parent dir */, 
 			 swmouse_read_procmem, 
 			 NULL /* client data */);
-  printk(KERN_INFO "swmouse: module registred\n");
+  printk(KERN_INFO "swmouse: proc entry created\n");
+
 
   return retval;
 }
+
+
 
 
 
@@ -198,7 +206,8 @@ init_module(void)
 void 
 cleanup_module(void)
 {
-  input_unregister_device(&swmouse.idev);
+  input_unregister_device(swmouse.idev);
+/*   input_free_device(swmouse.idev); */
   misc_deregister(&swmouse_misc);
   remove_proc_entry("swmouse", NULL /* parent dir */);
   printk(KERN_INFO "swmouse: module unregsitred\n");
@@ -207,14 +216,31 @@ cleanup_module(void)
 
 int swmouse_open(struct inode *inode, struct file *filp)
 {
-    return 0; /* Ok */
+  printk(KERN_INFO "swmouse: open\n");
+  return 0; /* Ok */
 }    
 
 
 
 int swmouse_release(struct inode *inode, struct file *filp)
 {
+  printk(KERN_INFO "swmouse: releas\n");
     return 0;
+}
+
+
+int swmouse_open_simple(struct input_dev *dev)
+{
+  printk(KERN_INFO "swmouse: open_simple\n");
+    return 0; /* Ok */
+}    
+
+
+
+void swmouse_release_simple(struct input_dev *dev)
+{
+  printk(KERN_INFO "swmouse: release_simple\n");
+    return ;
 }
 
 
@@ -224,19 +250,17 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
 		    loff_t *offp)
 {
     static char localbuf[10];
+    int  i;
     char letter;
     char *tmp;
     int  nrs;
-    
-
-    struct input_dev *dev;
-
-    dev = &swmouse.idev;
+    int ret;
 
     /* accept 10 bytes at a time, at most */
     if (count >10) count=10;
     copy_from_user(localbuf, buf, count);
     
+
     letter=localbuf[0];
     tmp=&localbuf[1];
     if (!sscanf (tmp, "%d",&nrs)<0)
@@ -246,42 +270,30 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
       }
  
     if ( (nrs<=0) || (nrs>1024) ) nrs=1;
+    
+    printk(KERN_INFO "swmouse: nrs=%d letter=%c\n", nrs, letter);
 
     switch (letter) {
-       case 'u': case 'U': 
-           swmouse.ups+=nrs;
-           input_report_rel(dev, REL_Y, 0-nrs);
-           break;
-       case 'd': case 'D': 
-           swmouse.downs+=nrs;
-           input_report_rel(dev, REL_Y, nrs);
-           break;
-       case 'l': case 'L': 
-           input_report_rel(dev, REL_X, 0-nrs);
-           swmouse.lefts+=nrs;
-           break;
-       case 'r': case 'R': 
-           swmouse.rights+=nrs;
-           input_report_rel(dev, REL_X, nrs);
-           break;
-           
-       case 'b': 
-           if ( ( nrs > 0 ) && ( nrs < 6 ))
-               {
-                   swmouse.buttons[nrs]++;
-                   printk ("fake button %d\n", 
-                           nrs);
-                   input_report_key(dev, BTN_1, nrs);
-                   break;
-               }
-       case 'B': 
-           if ( ( nrs > 0 ) && ( nrs < 6 ))
-               {
-                   swmouse.buttons[nrs]++;
-                   input_report_key(dev, BTN_1, nrs);
-                   break;
-               }
-           
+    case 'u': case 'U': 
+      swmouse.ups+=nrs;
+      input_report_rel(swmouse.idev, REL_Y, 0-nrs);
+      printk(KERN_INFO "swmouse: input_report_rel(%lu,%d,%d) \n", swmouse.idev, REL_Y, 0-nrs);
+
+      printk(KERN_INFO "swmouse: synced \n");
+
+      break;
+    case 'd': case 'D': 
+      swmouse.downs+=nrs;
+      input_report_rel(swmouse.idev, REL_Y, nrs);
+      break;
+    case 'l': case 'L': 
+      input_report_rel(swmouse.idev, REL_X, 0-nrs);
+      swmouse.lefts+=nrs;
+      break;
+    case 'r': case 'R': 
+      swmouse.rights+=nrs;
+      input_report_rel(swmouse.idev, ABS_X, nrs); 
+      break;
     case '0': 
       swmouse.rights=0;
       swmouse.lefts=0;
@@ -291,14 +303,15 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
     default:
       ;
     }
-    input_sync(dev);
+    input_sync(swmouse.idev);
     return count;
 }
 
 
 
 struct file_operations swmouse_file_operations = {
-	write:    swmouse_write,
-	open:     swmouse_open,
-	release:  swmouse_release,
+	.owner   =    THIS_MODULE,
+	.write   =    swmouse_write,
+	.open    =    swmouse_open,
+	.release =    swmouse_release,
 };
