@@ -136,6 +136,13 @@ init_module(void)
 {
     int retval;
 
+#ifdef NEW_INPUT_API
+    swkeybd.idev = input_allocate_device();
+#else
+    static struct input_dev mydev ; 
+    swkeybd.idev = &mydev;
+#endif
+
     printk(KERN_INFO "swkeybd: 1\n");
     retval = misc_register(&swkeybd_misc);
     if (retval!=0)
@@ -145,7 +152,6 @@ init_module(void)
 	return retval;
       }
 
-    swkeybd.idev = input_allocate_device();
 
 
     /* set the name */
@@ -249,6 +255,20 @@ press_rel (int key)
   return 0;
 }
 
+int 
+press (int key)
+{
+  input_report_key(swkeybd.idev, key, 1); /* keypress */
+  return 0;
+}
+
+int 
+release (int key)
+{
+  input_report_key(swkeybd.idev, key, 0); /* release */
+  return 0;
+}
+
 
 int
 fake_esc (char *str)
@@ -314,10 +334,6 @@ fake_esc (char *str)
     {
       press_rel(KEY_SPACE); 
     }
-  else if (strcmp (str, "SPACE")==0)
-    {
-      press_rel(KEY_SPACE); 
-    }
   else if (strcmp (str, "COMMA")==0)
     {
       press_rel(KEY_COMMA); 
@@ -341,6 +357,30 @@ fake_esc (char *str)
   else if (strcmp (str, "KEY_UP")==0)
     {
       press_rel(KEY_UP); 
+    }
+  else if (strcmp (str, "CONTROL_DOWN")==0)
+    {
+      press(KEY_LEFTCTRL); 
+    }
+  else if (strcmp (str, "CONTROL_UP")==0)
+    {
+      press_rel(KEY_LEFTCTRL); 
+    }
+  else if (strcmp (str, "CONTROL")==0)
+    {
+      press_rel(KEY_LEFTCTRL); 
+    }
+  else if (strcmp (str, "SHIFT_DOWN")==0)
+    {
+      press(KEY_LEFTSHIFT); 
+    }
+  else if (strcmp (str, "SHIFT_UP")==0)
+    {
+      press_rel(KEY_LEFTSHIFT); 
+    }
+  else if (strcmp (str, "SHIFT")==0)
+    {
+      press_rel(KEY_LEFTSHIFT); 
     }
   else if (strcmp (str, "clear")==0)
     {
@@ -380,7 +420,7 @@ swkeybd_write(struct file *filp, const char *buf, size_t count,
     
     if (count >16) count=16;
     copy_from_user(localbuf, buf, count);
-    
+
     /* scan written data */
     for (i=0; i<count; i++)
       {
@@ -548,6 +588,6 @@ int init_keycodes(void)
   set_bit ( KEY_UP,	swkeybd.idev->keybit);
   set_bit ( KEY_DOWN ,swkeybd.idev->keybit);
 
-set_bit ( KEY_LEFTBRACE,swkeybd.idev->keybit);
-set_bit ( KEY_RIGHTBRACE,swkeybd.idev->keybit);
+  set_bit ( KEY_LEFTBRACE,swkeybd.idev->keybit);
+  set_bit ( KEY_RIGHTBRACE,swkeybd.idev->keybit);
 }

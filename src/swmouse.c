@@ -139,6 +139,13 @@ init_module(void)
 {
   int retval;
     
+#ifdef NEW_INPUT_API
+  swmouse.idev = input_allocate_device();
+#else
+  static struct input_dev mydev ; 
+  swmouse.idev = &mydev;
+#endif
+
   /* 
    * register the our faker as a misc device
    */ 
@@ -150,7 +157,6 @@ init_module(void)
       return retval;
     }
 
-  swmouse.idev = input_allocate_device();
   
   /* set the name */
   swmouse.idev->name    = "swmouse";
@@ -170,7 +176,7 @@ init_module(void)
   input_set_abs_params(swmouse.idev, ABS_Y, YMIN_NOMINAL, YMAX_NOMINAL, 0, 0);
 
   /* register the device to the input system */
-  retval = input_register_device(swmouse.idev);
+  input_register_device(swmouse.idev);
   printk(KERN_INFO "swmouse: module regsitred  (%d)\n", retval);
 
   /* create the /proc entry */
@@ -252,82 +258,105 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
     int is_abs = 0;
     int pix=0;
 
+    if (count==0)
+      {
+	return 0;
+      }
+
     /* accept BUF_SIZE bytes at a time, at most */
     if (count >BUF_SIZE) count=BUF_SIZE;
     copy_from_user(localbuf, buf, count);
+
+    tmp=&localbuf[0];
+    if (tmp==NULL)
+      {
+	/* Strange case, silently ignore it :(   */
+	return count;
+      }
     
+    /* Remove leading blanks ...*/
+    while ( (tmp!=NULL) && (tmp[0]==' ') ) 
+      {
+	tmp++;
+      }
 
-    /* Remove blanks ...*/
-    while (tmp[0]==' ') tmp++;
-
-    letter=localbuf[0];
+    /* Save char to get direction later on */
+    letter=tmp[0];
 
     /* Go to next character */
-    tmp=&localbuf[1];
-    
-    /* Remove blanks ...*/
-    while (tmp[0]==' ') tmp++;
-
-    /* Remove "=" if any */
-    if (tmp[0]=='=')
+    if (tmp!=NULL)
       {
 	tmp++;
       }
     
+    /* Remove leading blanks ...*/
+    while ( (tmp!=NULL) && (tmp[0]==' ')) 
+      {
+	tmp++;
+      }
+ 
+    /* Remove "=" if any */
+    if ( (tmp!=NULL) && (tmp[0]=='=') )
+      {
+	tmp++;
+      }
+
+
     if (!sscanf (tmp, "%d",&nrs)<0)
       {
 	printk(KERN_INFO "swmouse: problems converting %s (tmp=%s   nrs=%d)\n",localbuf, tmp, nrs);
 	return count;
       }
  
-    if ( (nrs<0) || (nrs>HIGHEST_RESOLUTION) ) nrs=1;
+    if ( (nrs<=0) || (nrs>HIGHEST_RESOLUTION) ) nrs=1;
     
-    switch (letter) {
-    case 'u': case 'U': 
-      swmouse.ups+=nrs;
-      direction = REL_Y;
-      pix = 0-nrs;
-      break;
-    case 'd': case 'D': 
-      swmouse.downs+=nrs;
-      direction = REL_Y;
-      pix = nrs;
-      break;
-    case 'l': case 'L': 
-      direction = REL_X;
-      pix = 0-nrs;
-      swmouse.lefts+=nrs;
-      break;
-    case 'r': case 'R': 
-      swmouse.rights+=nrs;
-      direction = REL_X;
-      pix = nrs;
-      break;
-    case 'x': case 'X': 
-      swmouse.fixed_x++;
-      is_abs=1;
-      direction = ABS_X;
-      pix = nrs;
-      break;
-    case 'y': case 'Y': 
-      swmouse.fixed_y++;
-      is_abs=1;
-      direction = ABS_Y;
-      pix = nrs;
-      break;
-    case '0': 
-      swmouse.fixed_x=0;
-      swmouse.fixed_y=0;
-      swmouse.rights=0;
-      swmouse.lefts=0;
-      swmouse.downs=0;
-      swmouse.ups=0;
-      pix=0;
-      break;
-    default:
-      ;
-    }
-
+    switch (letter) 
+      {
+      case 'u': case 'U': 
+	swmouse.ups+=nrs;
+	direction = REL_Y;
+	pix = 0-nrs;
+	break;
+      case 'd': case 'D': 
+	swmouse.downs+=nrs;
+	direction = REL_Y;
+	pix = nrs;
+	break;
+      case 'l': case 'L': 
+	direction = REL_X;
+	pix = 0-nrs;
+	swmouse.lefts+=nrs;
+	break;
+      case 'r': case 'R': 
+	swmouse.rights+=nrs;
+	direction = REL_X;
+	pix = nrs;
+	break;
+      case 'x': case 'X': 
+	swmouse.fixed_x++;
+	is_abs=1;
+	direction = ABS_X;
+	pix = nrs;
+	break;
+      case 'y': case 'Y': 
+	swmouse.fixed_y++;
+	is_abs=1;
+	direction = ABS_Y;
+	pix = nrs;
+	break;
+      case '0': 
+	swmouse.fixed_x=0;
+	swmouse.fixed_y=0;
+	swmouse.rights=0;
+	swmouse.lefts=0;
+	swmouse.downs=0;
+	swmouse.ups=0;
+	pix=0;
+	break;
+      default:
+	;
+      }
+    
     if ( direction!=-1 )
       {
 	if (is_abs)
@@ -345,7 +374,7 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
 		   swmouse.idev, direction, pix);
 	    input_report_rel(swmouse.idev, direction, pix); 
 	  }
-	input_sync(swmouse.idev);
+ 	input_sync(swmouse.idev); 
       }
 
     return count;
