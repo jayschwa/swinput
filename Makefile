@@ -10,4 +10,4 @@ clean:
 	cd src && make clean
 
 install:
-	cd src && sudo $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src modules modules_install && sudo depmod -a
+	cd src && $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src modules modules_install && depmod -a

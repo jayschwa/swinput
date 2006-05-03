@@ -1,1 +1,120 @@
+Swinput can fake a mouse and a keyboard by using the Linux Input System. 
+
+The swinput modules read from a device and fakes hardware event 
+(mouse motion, key presses etc) as commands written on the devices. 
+Swinput presents status etc on the proc filesystem.
+
+From May 2006 only kernel 2.6 is supported.
+
+
+1 Building and installing
+========================================
+
+  tar zxvf swinput-0.5.tar.gz
+  make
+  make install (as root)
+
+
+If you are using devfs you are finished. Otherwise
+you have to create the devices manually; 
+
+  mknod /dev/swmouse c 10 $(grep swmouse /proc/misc | awk '{print $1}')
+  mknod /dev/swkeybd c 10 $(grep swkeybd /proc/misc | awk '{print $1}')
+
+
+2 Mouse Usage
+========================================
+
+By writing to /dev/swmouse you can fake 'mouse input'. 
+The following syntax us used 
+
+Option      Interpretation
+---------   ---------------------------------
+u nr        Moves the mouse up <nr> pixels	           
+d nr        Moves the mouse down <nr> pixels	           
+l nr        Moves the mouse left <nr> pixels	           
+r nr        Moves the mouse right <nr> pixels	           
+x nr        Moves the mouse to x position=<nr> (untested)
+y nr        Moves the mouse to y position=<nr> (untested)
+
+
+3 Keyboard Usage
+========================================
+
+By writing to /dev/swkeybd you can fake 'keyboard input'. 
+The following syntax us used 
+
+Option           Interpretation
+---------        ---------------------------------
+str              The string 'str' is typed by the faked keyboard
+[Fx]             The key Fx (e.g F2) is pressed. x can be 1-20
+[KEY_BACKSPACE]  Backspace is typed 
+[KEY_ENTER]      Enter is typed
+[KEY_SPACE]      Space is typed
+[KEY_COMMA]      , is typed
+[KEY_DOT]        . is typed
+[KEY_LEFT]       Left (arrow) key is typed
+[KEY_RIGHT]      Right (arrow) key is typed
+[KEY_DOWN]       Down (arrow) key is typed
+[KEY_UP]         Up (arrow) key is typed
+
+
+4 Usage staticstics
+========================================
+In the proc tree (/proc) you'll find usage statistics.
+
+4.1 swmouse usage statistics
+----------------------------------------
+
+If you read /proc/swmouse (e.g. by typing cat /proc/swmouse)
+you get the following information:
+
+swmouse:u:d:l:r:x:y
+
+where:
+  u     means the number of pixels we've moved up so far
+  d     means the number of pixels we've moved down so far
+  l     means the number of pixels we've moved left so far
+  r     means the number of pixels we've moved right so far
+  x     means the number of times we've moved to a fix x position
+  y     means the number of times we've moved to a fix y position
+
+You can zero the statistics counters by writing zero to the
+proc file (e.g echo "0" > /proc/swmouse) 
+
+4.2 swkeybd usage statistics
+----------------------------------------
+
+If you read /proc/swkeybd (e.g. by typing cat /proc/swkeybd)
+you get the following information:
+
+swkeybd:p:r:s_p:s_r
+
+where:
+  p     means the number of key presses so far
+  r     means the number of key releases so far
+  s_p   means the number of shift key presses so far
+  s_r   means the number of shift key releases so far
+
+You can zero the statistics counters by writing zero to the
+proc file (e.g echo "0" > /proc/swkeybd) 
+
+5 Examples
+========================================
+
+echo "u 10" > /dev/swmouse   
+   Moves the pointer up 10 pixels
+
+echo "d 123" > /dev/swmouse   
+   Moves the pointer down 123 pixels
+
+echo "ls -l [ENTER]" > /dev/swkeybd
+   Types 'ls -l' followed by enter
+
+   .. so you should see a file/dir listing if you 
+   have your focus a terminal emulator or a console
+
+
+
+
 
