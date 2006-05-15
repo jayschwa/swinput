@@ -78,7 +78,7 @@ where:
   y     means the number of times we've moved to a fix y position
 
 You can zero the statistics counters by writing zero to the
-proc file (e.g echo "0" > /proc/swmouse) 
+proc file (e.g echo "0" > /dev/swmouse) 
 
 4.2 swkeybd usage statistics
 ----------------------------------------
@@ -95,7 +95,7 @@ where:
   s_r   means the number of shift key releases so far
 
 You can set the statistics counters to zero by writing zero to the
-proc file (e.g echo "0" > /proc/swkeybd) 
+proc file (e.g echo "0" > /dev/swkeybd) 
 
 5 Examples
 ========================================
