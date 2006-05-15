@@ -1,10 +1,8 @@
-Swinput can fake a mouse and a keyboard by using the Linux Input System. 
+Swinput can fake mouse and keyboard input using the Linux Input System. 
 
-The swinput modules read from a device and fakes hardware event 
-(mouse motion, key presses etc) as commands written on the devices. 
-Swinput presents status etc on the proc filesystem.
-
-From May 2006 only kernel 2.6 is supported.
+The swinput modules read from a device and fake hardware events 
+(mouse motions, keyboard input, etc). Swinput presents status on the proc filesystem.
+As of May 2006 only kernel 2.6 is supported.
 
 
 1 Building and installing
@@ -15,8 +13,8 @@ From May 2006 only kernel 2.6 is supported.
   make install (as root)
 
 
-If you are using devfs you are finished. Otherwise
-you have to create the devices manually; 
+If you are using devfs you are finished with building and installation. 
+Otherwise you have to create the devices manually; 
 
   mknod /dev/swmouse c 10 $(grep swmouse /proc/misc | awk '{print $1}')
   mknod /dev/swkeybd c 10 $(grep swkeybd /proc/misc | awk '{print $1}')
@@ -26,7 +24,7 @@ you have to create the devices manually;
 ========================================
 
 By writing to /dev/swmouse you can fake 'mouse input'. 
-The following syntax us used 
+The following syntax is used 
 
 Option      Interpretation
 ---------   ---------------------------------
@@ -42,7 +40,7 @@ y nr        Moves the mouse to y position=<nr> (untested)
 ========================================
 
 By writing to /dev/swkeybd you can fake 'keyboard input'. 
-The following syntax us used 
+The following syntax is used 
 
 Option           Interpretation
 ---------        ---------------------------------
@@ -80,7 +78,7 @@ where:
   y     means the number of times we've moved to a fix y position
 
 You can zero the statistics counters by writing zero to the
-dev entry (e.g echo "0" > /dev/swmouse) 
+proc file (e.g echo "0" > /proc/swmouse) 
 
 4.2 swkeybd usage statistics
 ----------------------------------------
@@ -96,8 +94,8 @@ where:
   s_p   means the number of shift key presses so far
   s_r   means the number of shift key releases so far
 
-You can zero the statistics counters by writing zero to the
-dev entry (e.g echo "0" > /dev/swkeybd) 
+You can set the statistics counters to zero by writing zero to the
+proc file (e.g echo "0" > /proc/swkeybd) 
 
 5 Examples
 ========================================
@@ -112,7 +110,7 @@ echo "ls -l [ENTER]" > /dev/swkeybd
    Types 'ls -l' followed by enter
 
    .. so you should see a file/dir listing if you 
-   have your focus a terminal emulator or a console
+   have as your focus a terminal emulator or a console.
 
 
 
