@@ -1,4 +1,4 @@
-NEW_INPUT_API := $(shell uname -r | sed 's,-[0-9\-]*,,g' | grep -c -e '2.6.1[56789]')
+NEW_INPUT_API := $(shell uname -r | sed 's,-[0-9\-]*,,g' | grep -c -e '2.6.1[56789]' -e '2.6.2')
 
 ifeq ($(NEW_INPUT_API),1)
 CFLAGS=-D$(NEW_INPUT_API) 
