@@ -1,0 +1,7 @@
+2008-01-16  Henrik Sandklef  <hesa@gnu.org>
+
+	* src/Makefile (NEW_INPUT_API): 
+	Updated Makefile to handle kernels 2.6.2* and higher
+
+	
+
