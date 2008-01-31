@@ -6,7 +6,9 @@
  *         idiom.c 
  *     which is heavily based on on usbmouse.c
  *
- *  Copyright (c) 2003,2004,2005,2006 Henrik Sandklef <hesa@gnu.org>                    
+ *  Copyright (c) 2003,2004,2005,2006 Henrik Sandklef <hesa@gnu.org> 
+ *                2007 Henrik Sandklef <hesa@gnu.org>, 
+ *                     Daniel Hiepler <rigid@boogiepalace.hopto.org>
  *                                                                   
  * This program is free software; you can redistribute it and/or     
  * modify it under the terms of the GNU General Public License       
