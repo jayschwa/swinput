@@ -1,7 +1,37 @@
+2008-01-29 Daniel Hiepler <rigid@boogiepalace.hopto.org>
+
+	* src/Makefile:
+	Fixed to work with kernel 2.6.23.9 and higher
+	
+	* src/code_mapping.c:
+	removed file
+	
+	* src/swkeybd.c:
+	Added remove_proc_entry() to cleanup_module()
+	Removed NEW_INPUT_API
+	Fixed compile warnings
+	Added additional error handling to init_module()
+	Use memset() now to clear swkeybd structure
+	Added input_free_device() in cleanup_module() and init_module()
+	Replaced strcmp() with strncmp()
+	minor cleanups
+
+	* src/swmouse.c:
+	Removed NEW_INPUT_API
+	Fixed compile warnings
+	Added additional error handling to init_module()
+	Use memset() now to clear swkeybd structure
+	Added input_free_device() in cleanup_module() and init_module()
+	Replaced strcmp() with strncmp()
+	Removed X*_NOMINAL and added module-parameter support
+	minor cleanups
+	
+	* README:
+	Documented module parameters
+	
+
 2008-01-16  Henrik Sandklef  <hesa@gnu.org>
 
 	* src/Makefile (NEW_INPUT_API): 
 	Updated Makefile to handle kernels 2.6.2* and higher
-
-	
 
