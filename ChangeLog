@@ -3,6 +3,10 @@
 	* Makefile: 
 	Set version to 0.7.3
 	Adding src/swinput.h to dist
+	Added test data to dist
+	New rules: 
+	dcheck - to test swinput modules using scripts
+	try    - to insmod the modules 
 
 	* test/inout.sh: 
 	* test/all.sh: 
@@ -10,11 +14,6 @@
 
 	* README: 
 	More about building (make try, make test, make dist)
-
-	* Makefile (dist): 
-	New rules: 
-	tester - to test swinput modules using scripts
-	try    - to insmod the modules 
 	
 	* src/swkeybd.c: 
 	Replaced some (deubg) printks against with optional macro
