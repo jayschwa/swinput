@@ -1,4 +1,4 @@
-VERSION := 0.7.2
+VERSION := 0.7.3
 KDIR   := /lib/modules/$(shell uname -r)/build
 PWD    := $(shell pwd)
 KERNEL := $(shell uname -r | sed 's,-[0-9\-]*,,g')
