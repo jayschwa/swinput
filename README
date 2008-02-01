@@ -2,6 +2,7 @@ Swinput can fake mouse and keyboard input using the Linux Input System.
 
 The swinput modules read from a device and fake hardware events 
 (mouse motions, keyboard input, etc). Swinput presents status on the proc filesystem.
+
 As of May 2006 only kernel 2.6 is supported.
 
 
@@ -14,10 +15,23 @@ As of May 2006 only kernel 2.6 is supported.
 
 
 If you are using devfs you are finished with building and installation. 
-Otherwise you have to create the devices manually; 
+Otherwise you have to create the devices manually;
+
+ ** You most likely don't need to exec the below commands **
 
   mknod /dev/swmouse c 10 $(grep swmouse /proc/misc | awk '{print $1}')
   mknod /dev/swkeybd c 10 $(grep swkeybd /proc/misc | awk '{print $1}')
+
+
+  make try
+    inserts the modules (using sudo)
+
+  make tester
+    runs the test scripts in test/ (using sudo)
+
+  make dist 
+    builds a dist package (incl gpg sig) for upload 
+
 
 
 2 Mouse Usage
