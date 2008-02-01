@@ -1,3 +1,18 @@
+2008-02-01  Henrik Sandklef  <hesa@gnu.org>
+
+	* src/swkeybd.c: 
+	Replaced some (deubg) printks against with optional macro
+	swinput_debug
+
+	* src/swmouse.c: 
+	Replaced some (deubg) printks against with optional macro
+	swinput_debug
+
+	* src/swinput.h: 
+	New file, first revision
+	Contains header thingies used by both modules
+
+
 2008-01-31  Henrik Sandklef  <hesa@sandklef.com>
 
 	* Makefile: 
