@@ -1,5 +1,9 @@
 2008-02-01  Henrik Sandklef  <hesa@gnu.org>
 
+	* Makefile: 
+	Set version to 0.7.3
+	Adding src/swinput.h to dist
+
 	* test/inout.sh: 
 	* test/all.sh: 
 	New files
