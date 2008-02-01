@@ -26,7 +26,7 @@ Otherwise you have to create the devices manually;
   make try
     inserts the modules (using sudo)
 
-  make tester
+  make check
     runs the test scripts in test/ (using sudo)
 
   make dist 
