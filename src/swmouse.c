@@ -46,6 +46,7 @@
 #include <linux/moduleparam.h>
 #include <asm/uaccess.h>
 
+#include "swinput.h"
 
 MODULE_DESCRIPTION("Fake-mouse input device");
 MODULE_AUTHOR("Henrik Sandklef  <hesa@gnu.org>");
@@ -134,7 +135,7 @@ int init_module(void)
 {
     int retval = -1;
     
-    printk (KERN_INFO "swmouse: Initializing...\n");
+    swinput_debugs( "swmouse: Initializing...\n");
     
     if(xmax == 0)
         xmax = XMAX;
@@ -401,17 +402,17 @@ ssize_t swmouse_write(struct file *filp, const char *buf, size_t count,
     {
         if (is_abs)
         {
-            printk(KERN_INFO "input_report_abs(%p,%d,%d)\n",
-                    swmouse.idev, direction, pix);
-            input_report_abs(swmouse.idev, direction, 0);
-            input_sync(swmouse.idev);
-            input_sync(swmouse.idev);
-            input_report_abs(swmouse.idev, direction, pix);
+	  swinput_debug("input_report_abs(%d",direction);
+	  swinput_debug(",%d)\n",pix);
+	  input_report_abs(swmouse.idev, direction, 0);
+	  input_sync(swmouse.idev);
+	  input_sync(swmouse.idev);
+	  input_report_abs(swmouse.idev, direction, pix);
         }
         else
-        {
-            printk(KERN_INFO "input_report_rel(%p,%d,%d)\n",
-            swmouse.idev, direction, pix);
+	  {
+            swinput_debug( "input_report_rel(%d,", direction);
+            swinput_debug( "%d)\n",pix);
             input_report_rel(swmouse.idev, direction, pix); 
         }
         input_sync(swmouse.idev); 
