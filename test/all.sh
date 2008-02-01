@@ -14,10 +14,18 @@ TMP=0
 while [ $TMP -ne 10 ]
 do
     echo "Test all: loop nr ${TMP}"
+    echo "-- inout.sh -- "
     ./inout.sh 2
     check_ret_val $?
+
+    echo "-- swkeybd.sh -- "
     sleep 1
-    ./test.sh
+    ./swkeybd.sh
+    check_ret_val $?
+
+    echo "-- swmouse.sh -- "
+    sleep 1
+    ./swmouse.sh
     check_ret_val $?
 
     TMP=$(( TMP  + 1 ))

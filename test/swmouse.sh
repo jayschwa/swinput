@@ -162,7 +162,6 @@ function circle()
 
 circle 
 
-exit
 mcross 50
 mcross 100
 mcross 200
