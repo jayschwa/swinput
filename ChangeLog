@@ -1,12 +1,5 @@
 2008-02-01  Henrik Sandklef  <hesa@gnu.org>
 
-	* Makefile (VERSION): 
-	Set version to 0.7.3
-
-	* test/inout.sh: 
-	* test/all.sh: 
-	New files
-
 	* README: 
 	More about building (make try, make test, make dist)
 
