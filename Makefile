@@ -30,7 +30,7 @@ dist:
 	mkdir -p swinput-$(VERSION)/src swinput-$(VERSION)/test
 	cp   ChangeLog COPYING README  Makefile swinput-$(VERSION)/
 	cp   test/*.sh swinput-$(VERSION)/test/
-	cp   src/*.c swinput-$(VERSION)/src/
+	cp   src/*.c src/*.h swinput-$(VERSION)/src/
 	cp   src/Makefile swinput-$(VERSION)/src/
 	rm -f swinput-$(VERSION).tar swinput-$(VERSION).tar.gz
 	tar cvf swinput-$(VERSION).tar   swinput-$(VERSION)/
