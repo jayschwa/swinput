@@ -6,7 +6,9 @@
  *         idiom.c 
  *     which is heavily based on on usbmouse.c
  *
- *  Copyright (c) 2003,2004,2005,2006 Henrik Sandklef <hesa@gnu.org>                   
+ *  Copyright (c) 2003,2004,2005,2006 Henrik Sandklef <hesa@gnu.org>
+ *                2007 Henrik Sandklef <hesa@gnu.org>, 
+ *                     Daniel Hiepler <rigid@boogiepalace.hopto.org>
  *                                                                   
  * This program is free software; you can redistribute it and/or     
  * modify it under the terms of the GNU General Public License       
@@ -49,7 +51,9 @@
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 
+#include <linux/proc_fs.h>
 
+#include "swinput.h"
 
 MODULE_DESCRIPTION("Fake-keyboard input device");
 MODULE_AUTHOR("Henrik Sandklef  <hesa@gnu.org>");
@@ -197,8 +201,7 @@ static void fake_key (char c)
 {
 
   int do_shift = 0;
-  printk (KERN_INFO "swkeybd: printing char '%c' (%d)  ---> %d\n", c, c,
-	  keycodes[(int) c]);
+  swinput_debug("swkeybd: printing char '%c'\n", c);
 
   if ((c >= 'A') && (c <= 'Z'))
     {
@@ -214,7 +217,7 @@ static void fake_key (char c)
 
   input_report_key (swkeybd.idev, keycodes[(int) c], 1);	/* keypress */
   swkeybd.key_press++;
-  printk (KERN_INFO "swkeybd: key_press = %d\n", swkeybd.key_press);
+  swinput_debug("swkeybd: key_press = %d\n", swkeybd.key_press);
 
   input_report_key (swkeybd.idev, keycodes[(int) c], 0);	/* release */
   swkeybd.key_release++;
@@ -267,7 +270,9 @@ int release (int key)
  */
 int fake_esc (char *str, int str_length)
 {
-    printk ("fake_esc() \"%s\"\n", str);
+  swinput_debug( "fake: %c ", str[0]);
+  swinput_debug( " %c", str[1]);
+  swinput_debug( " %c \n", str[2]);
     if (str[0] == 'F')
     {
         int key;
@@ -426,31 +431,30 @@ ssize_t swkeybd_write (struct file * filp, const char *buf, size_t count,
         if (localbuf[i] == '\\')
         {
             i++;
-            printk ("escape sequence : %c\n", localbuf[i]);
+            swinput_debug("escape sequence : %c\n", localbuf[i]);
             fake_key (localbuf[i]);
         }
         
         if (localbuf[i] == '[')
         {
-            printk (" [ found\n");
-            found = 1;
+	  swinput_debugs(" [ found\n");
+	  found = 1;
         }
         else if (localbuf[i] == ']')
         {
-            found = 0;
-            escapebuf[idx] = '\0';
-            escapebuf[idx++] = '\0';
-            printk (" ]  found\n");
-            printk ("calling fake on string idx=%d   %c%c%c\n", idx,
-              escapebuf[0], escapebuf[1], escapebuf[2]);
-            fake_esc (escapebuf, BUF_SIZE);
-            idx = 0;
+	  found = 0;
+	  escapebuf[idx] = '\0';
+	  escapebuf[idx++] = '\0';
+	  swinput_debugs(" ]  found\n");
+	  fake_esc (escapebuf, BUF_SIZE);
+	  idx = 0;
         }
         else
         {
             if (found)
             {
-                printk ("adding %c at %d\n", localbuf[i], idx);
+                swinput_debug ("adding %c \n", localbuf[i]);
+                swinput_debug ("%d\n", idx);
                 escapebuf[idx++] = localbuf[i];
             }
             else
