@@ -1,3 +1,43 @@
+2008-02-03  Henrik Sandklef  <hesa@gnu.org>
+
+	* Makefile: 
+	Failure of rmmod (in try target) doesn't break exec.
+
+2008-02-01  Henrik Sandklef  <hesa@gnu.org>
+
+	* Makefile: 
+	Set version to 0.7.3
+	Adding src/swinput.h to dist
+	Added test data to dist
+	New rules: 
+	dcheck - to test swinput modules using scripts
+	try    - to insmod the modules 
+
+	* test/inout.sh: 
+	* test/all.sh: 
+	New files
+
+	* README: 
+	More about building (make try, make test, make dist)
+	
+	* src/swkeybd.c: 
+	Replaced some (deubg) printks against with optional macro
+	swinput_debug
+
+	* src/swmouse.c: 
+	Replaced some (deubg) printks against with optional macro
+	swinput_debug
+
+	* src/swinput.h: 
+	New file, first revision
+	Contains header thingies used by both modules
+
+
+2008-01-31  Henrik Sandklef  <hesa@sandklef.com>
+
+	* Makefile: 
+	Added better dist target 
+	
 
 2008-01-31 Daniel Hiepler <rigid@boogiepalace.hopto.org>
 
