@@ -2,13 +2,8 @@ Swinput can fake mouse and keyboard input using the Linux Input System.
 
 The swinput modules read from a device and fake hardware events 
 (mouse motions, keyboard input, etc). Swinput presents status on the proc filesystem.
-<<<<<<< README
-
-As of May 2006 only kernel 2.6.x is supported.
-=======
 
 As of May 2006 only kernel 2.6 is supported.
->>>>>>> 1.7
 
 
 1 Building and installing
