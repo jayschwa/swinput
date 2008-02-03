@@ -1,31 +1,41 @@
-2008-02-01  Henrik Sandklef  <hesa@gnu.org>
 
-	* Makefile: 
-	Set version to 0.7.3
-	Adding src/swinput.h to dist
-	Added test data to dist
-	New rules: 
-	dcheck - to test swinput modules using scripts
-	try    - to insmod the modules 
+2008-01-31 Daniel Hiepler <rigid@boogiepalace.hopto.org>
 
-	* test/inout.sh: 
-	* test/all.sh: 
-	New files
-
-	* README: 
-	More about building (make try, make test, make dist)
+	* src/swmouse.c:
+	Removed LONG() macro for it was removed from kernel 2.6.24
 	
-	* src/swkeybd.c: 
-	Replaced some (deubg) printks against with optional macro
-	swinput_debug
 
-	* src/swmouse.c: 
-	Replaced some (deubg) printks against with optional macro
-	swinput_debug
+2008-01-29 Daniel Hiepler <rigid@boogiepalace.hopto.org>
 
-	* src/swinput.h: 
-	New file, first revision
-	Contains header thingies used by both modules
+	* src/Makefile:
+	Fixed to work with kernel 2.6.23.9 and higher
+	
+	* src/code_mapping.c:
+	removed file
+	
+	* src/swkeybd.c:
+	Added remove_proc_entry() to cleanup_module()
+	Removed NEW_INPUT_API
+	Fixed compile warnings
+	Added additional error handling to init_module()
+	Use memset() now to clear swkeybd structure
+	Added input_free_device() in cleanup_module() and init_module()
+	Replaced strcmp() with strncmp()
+	minor cleanups
+
+	* src/swmouse.c:
+	Removed NEW_INPUT_API
+	Fixed compile warnings
+	Added additional error handling to init_module()
+	Use memset() now to clear swkeybd structure
+	Added input_free_device() in cleanup_module() and init_module()
+	Replaced strcmp() with strncmp()
+	Removed X*_NOMINAL and added module-parameter support
+	minor cleanups
+	
+	* README:
+	Documented module parameters
+	
 
 
 2008-01-31  Henrik Sandklef  <hesa@sandklef.com>
@@ -69,4 +79,3 @@
 
 	* src/Makefile (NEW_INPUT_API): 
 	Updated Makefile to handle kernels 2.6.2* and higher
-

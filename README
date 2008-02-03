@@ -2,8 +2,13 @@ Swinput can fake mouse and keyboard input using the Linux Input System.
 
 The swinput modules read from a device and fake hardware events 
 (mouse motions, keyboard input, etc). Swinput presents status on the proc filesystem.
+<<<<<<< README
+
+As of May 2006 only kernel 2.6.x is supported.
+=======
 
 As of May 2006 only kernel 2.6 is supported.
+>>>>>>> 1.7
 
 
 1 Building and installing
@@ -37,6 +42,10 @@ Otherwise you have to create the devices manually;
 2 Mouse Usage
 ========================================
 
+Load module with "modprobe swmouse"
+You can define the maximum screen resolution using the "xmax" and "ymax" 
+module-parameters.
+
 By writing to /dev/swmouse you can fake 'mouse input'. 
 The following syntax is used 
 
@@ -52,6 +61,8 @@ y nr        Moves the mouse to y position=<nr> (untested)
 
 3 Keyboard Usage
 ========================================
+
+Load module with "modprobe swkeybd"
 
 By writing to /dev/swkeybd you can fake 'keyboard input'. 
 The following syntax is used 
@@ -125,8 +136,3 @@ echo "ls -l [ENTER]" > /dev/swkeybd
 
    .. so you should see a file/dir listing if you 
    have as your focus a terminal emulator or a console.
-
-
-
-
-
