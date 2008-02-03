@@ -15,7 +15,7 @@ install:
 
 try:
 	-sudo rmmod swmouse 
-	sudo rmmod swkeybd
+	-sudo rmmod swkeybd
 	sudo insmod src/swmouse.ko && sudo insmod src/swkeybd.ko
 	sleep 1
 	sudo chmod a+rwx /dev/swkeybd /dev/swmouse
