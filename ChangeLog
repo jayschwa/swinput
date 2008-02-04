@@ -1,3 +1,16 @@
+2008-02-04  Daniel Hiepler <rigid@boogiepalace.hopto.org>
+
+	* swmouse.c:
+	corrected copyright note (i joined 2008 ;)
+	Uncommented verbosity routines
+	reformatted source according to kernel styleguide
+	 (http://kernelnewbies.org/New_Kernel_Hacking_HOWTO/Kernel_Programming_Style_Guidelines)
+	renamed press_rel() to swkeybd_keyHit()
+	renamed press() to swkeybd_keyPress()
+	renamed press_rel() to swkeybd_keyRelease()
+	some commenting
+	some beautifying
+	
 2008-02-03  Henrik Sandklef  <hesa@gnu.org>
 
 	* Makefile: 
