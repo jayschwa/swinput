@@ -87,9 +87,9 @@ struct miscdevice swmouse_misc = {
 };
 
 /**
- *   Name:        swmouse_read_procmem
+ * Name:        swmouse_read_procmem
  *
- *   Description: invoked when reading from /proc/swmouse
+ * Description: invoked when reading from /proc/swmouse
  *
  */
 int swmouse_read_procmem ( char *buf, char **start, off_t offset,
@@ -116,9 +116,9 @@ int swmouse_read_procmem ( char *buf, char **start, off_t offset,
 }
 
 /**
- *   Name:        init_module
+ * Name:        init_module
  *
- *   Description: invoked when inserting the module
+ * Description: invoked when inserting the module
  *
  */
 int init_module ( void )
@@ -174,11 +174,13 @@ int init_module ( void )
                 swmouse.idev->open = swmouse_open_simple;
                 swmouse.idev->close = swmouse_release_simple;
 
+                /* set event-bits */
                 swmouse.idev->evbit[0] =
                         BIT ( EV_KEY ) | BIT ( EV_REL ) | BIT ( EV_ABS );
 
                 swmouse.idev->relbit[0] = BIT ( REL_Y ) | BIT ( REL_X );
 
+                /* set bits for mouse-buttons */
                 swmouse.idev->keybit[LONG ( BTN_LEFT )] =
                         BIT ( BTN_LEFT ) | BIT ( BTN_MIDDLE ) |
                         BIT ( BTN_RIGHT );
@@ -214,9 +216,9 @@ int init_module ( void )
 }
 
 /**
- *   Name:        cleanup_module
+ * Name:        cleanup_module
  *
- *   Description: invoked when removing the module
+ * Description: invoked when removing the module
  *
  */
 void cleanup_module ( void )
@@ -229,9 +231,9 @@ void cleanup_module ( void )
 }
 
 /**
- *   Name:        swmouse_open
+ * Name:        swmouse_open
  *
- *   Description: invoked when fake-device is opened
+ * Description: invoked when fake-device is opened
  *
  */
 int swmouse_open ( struct inode *inode, struct file *filp )
@@ -242,9 +244,9 @@ int swmouse_open ( struct inode *inode, struct file *filp )
 }
 
 /**
- *   Name:        swmouse_release
+ * Name:        swmouse_release
  *
- *   Description: invoked when fake-device is released
+ * Description: invoked when fake-device is released
  *
  */
 int swmouse_release ( struct inode *inode, struct file *filp )
@@ -254,9 +256,9 @@ int swmouse_release ( struct inode *inode, struct file *filp )
 }
 
 /**
- *   Name:        swmouse_open_simple
+ * Name:        swmouse_open_simple
  *
- *   Description: invoked when fake-device is opened
+ * Description: invoked when fake-device is opened
  *
  */
 int swmouse_open_simple ( struct input_dev *dev )
@@ -267,9 +269,9 @@ int swmouse_open_simple ( struct input_dev *dev )
 }
 
 /**
- *   Name:        swmouse_release_simple
+ * Name:        swmouse_release_simple
  *
- *   Description: invoked when fake-device is released
+ * Description: invoked when fake-device is released
  *
  */
 void swmouse_release_simple ( struct input_dev *dev )
@@ -279,9 +281,9 @@ void swmouse_release_simple ( struct input_dev *dev )
 }
 
 /**
- *   Name:        swmouse_write
+ * Name:        swmouse_write
  *
- *   Description: write accepts data and converts it to mouse movement
+ * Description: write accepts data and converts it to mouse movement
  *
  */
 ssize_t swmouse_write ( struct file * filp, const char *buf, size_t count,
@@ -430,7 +432,6 @@ ssize_t swmouse_write ( struct file * filp, const char *buf, size_t count,
                 pix = 0;
                 break;
 
-        
         default:
                 ;
         }
@@ -448,7 +449,7 @@ ssize_t swmouse_write ( struct file * filp, const char *buf, size_t count,
                         input_sync ( swmouse.idev );
                         input_report_abs ( swmouse.idev, direction, pix );
                 }
-                
+
                 /* relative movement ... */
                 else
                 {
@@ -456,7 +457,7 @@ ssize_t swmouse_write ( struct file * filp, const char *buf, size_t count,
                         swinput_debug ( "%d)\n", pix );
                         input_report_rel ( swmouse.idev, direction, pix );
                 }
-                
+
                 input_sync ( swmouse.idev );
         }
 

@@ -68,7 +68,7 @@ struct swkeybd_device
 
         int key_press;
         int key_release;
-}swkeybd;
+} swkeybd;
 
 /* forward declaration */
 struct file_operations swkeybd_file_operations;
@@ -80,9 +80,9 @@ struct miscdevice swkeybd_misc = {
 };
 
 /*
- *   Name:        swkeybd_read_procmem
+ * Name:        swkeybd_read_procmem
  *
- *   Description: invoked when reading from /proc/swkeybd
+ * Description: invoked when reading from /proc/swkeybd
  *
  */
 int swkeybd_read_procmem ( char *buf, char **start, off_t offset,
@@ -110,9 +110,9 @@ int swkeybd_read_procmem ( char *buf, char **start, off_t offset,
 }
 
 /*
- *   Name:        init_module
+ * Name:        init_module
  *
- *   Description: invoked when module is loaded
+ * Description: invoked when module is loaded
  *
  */
 int init_module ( void )
@@ -167,9 +167,9 @@ int init_module ( void )
 }
 
 /*
- *   Name:        cleanup_module
+ * Name:        cleanup_module
  *
- *   Description: invoked when module is loaded
+ * Description: invoked when module is loaded
  *
  */
 void cleanup_module ( void )
@@ -184,14 +184,74 @@ void cleanup_module ( void )
 }
 
 /*
- *   Name:        fake_key
+ * Name:        swkeybd_open
  *
- *   Description: Handler for data sent in by the device. 
- *                The function is called by the USB kernel subsystem 
- *                whenever the device spits out new data
+ * Description: the open method does the same as swkeybd_probe does
  *
  */
-static void fake_key ( char c )
+int swkeybd_open ( struct inode *inode, struct file *filp )
+{
+        return 0;               /* Ok */
+}
+
+/*
+ * Name:        swkeybd_release
+ *
+ * Description: close releases the device, like swkeybd_disconnect
+ *
+ */
+int swkeybd_release ( struct inode *inode, struct file *filp )
+{
+        return 0;
+}
+
+/*
+ * Name:        swkeybd_keyPress
+ *
+ * Description: simulate keypress
+ *
+ */
+int swkeybd_keyPress ( int key )
+{
+        input_report_key ( swkeybd.idev, key, 1 );      /* keypress */
+        return 0;
+}
+
+/*
+ * Name:        swkeybd_keyRelease
+ *
+ * Description: simulate key-release
+ *
+ */
+int swkeybd_keyRelease ( int key )
+{
+        input_report_key ( swkeybd.idev, key, 0 );      /* release */
+        return 0;
+}
+
+/*
+ * Name:        swkeybd_pressRelease
+ *
+ * Description: close releases the device, like swkeybd_disconnect
+ *
+ */
+int swkeybd_keyHit ( int key )
+{
+        swkeybd_keyPress ( key );       /* keypress */
+        swkeybd_keyRelease ( key );     /* release */
+        return 0;
+}
+
+/*
+ * Name:        swkeybd_fakeKey
+ *
+ * Description: Handler for data sent in by the device. 
+ *              The function is called by the USB kernel subsystem 
+ *              whenever the device spits out new data
+ *
+ * @param c - char to send
+ */
+static void swkeybd_fakeKey ( char c )
 {
 
         int do_shift = 0;
@@ -205,81 +265,22 @@ static void fake_key ( char c )
 
         if ( do_shift )
         {
-                input_report_key ( swkeybd.idev, KEY_LEFTSHIFT, 1 );    /* keypress */
+                swkeybd_keyPress ( KEY_LEFTSHIFT );     /* keypress */
                 swkeybd.shift_press++;
         }
 
-        input_report_key ( swkeybd.idev, keycodes[( int ) c], 1 );      /* keypress */
+        swkeybd_keyPress ( keycodes[( int ) c] );
         swkeybd.key_press++;
         swinput_debug ( "swkeybd: key_press = %d\n", swkeybd.key_press );
 
-        input_report_key ( swkeybd.idev, keycodes[( int ) c], 0 );      /* release */
+        swkeybd_keyRelease ( keycodes[( int ) c] );     /* release */
         swkeybd.key_release++;
 
         if ( do_shift )
         {
-                input_report_key ( swkeybd.idev, KEY_LEFTSHIFT, 0 );    /* keyrelease */
+                swkeybd_keyRelease ( KEY_LEFTSHIFT );   /* keyrelease */
                 swkeybd.shift_release++;
         }
-}
-
-/*
- *   Name:        swkeybd_open
- *
- *   Description: the open method does the same as swkeybd_probe does
- *
- */
-int swkeybd_open ( struct inode *inode, struct file *filp )
-{
-        return 0;               /* Ok */
-}
-
-/*
- *   Name:        swkeybd_release
- *
- *   Description: close releases the device, like swkeybd_disconnect
- *
- */
-int swkeybd_release ( struct inode *inode, struct file *filp )
-{
-        return 0;
-}
-
-/*
- *   Name:        swkeybd_keyPress
- *
- *   Description: simulate keypress
- *
- */
-int swkeybd_keyPress ( int key )
-{
-        input_report_key ( swkeybd.idev, key, 1 );      /* keypress */
-        return 0;
-}
-
-/*
- *   Name:        swkeybd_keyRelease
- *
- *   Description: simulate key-release
- *
- */
-int swkeybd_keyRelease ( int key )
-{
-        input_report_key ( swkeybd.idev, key, 0 );      /* release */
-        return 0;
-}
-
-/*
- *   Name:        swkeybd_pressRelease
- *
- *   Description: close releases the device, like swkeybd_disconnect
- *
- */
-int swkeybd_keyHit ( int key )
-{
-        swkeybd_keyPress ( key );                       /* keypress */
-        swkeybd_keyRelease ( key );                     /* release */
-        return 0;
 }
 
 /**
@@ -413,14 +414,22 @@ int fake_esc ( char *str, int str_length )
         return 0;
 }
 
-/* poll reports the device as writeable */
+/*
+ * Name:        swkeybd_poll
+ *
+ * Description: poll reports the device as writeable
+ *
+ */
 unsigned int swkeybd_poll ( struct file *filp, struct poll_table_struct *table )
 {
         return POLLWRNORM | POLLOUT;
 }
 
-/* 
- * write accepts data and converts it to mouse movement 
+/*
+ * Name:        swkeybd_write
+ *
+ * Description: write accepts data and converts it to mouse movement
+ *
  */
 ssize_t swkeybd_write ( struct file * filp, const char *buf, size_t count,
                         loff_t * offp )
@@ -450,7 +459,7 @@ ssize_t swkeybd_write ( struct file * filp, const char *buf, size_t count,
                 {
                         i++;
                         swinput_debug ( "escape sequence : %c\n", localbuf[i] );
-                        fake_key ( localbuf[i] );
+                        swkeybd_fakeKey ( localbuf[i] );
                 }
 
                 if ( localbuf[i] == '[' )
@@ -477,7 +486,7 @@ ssize_t swkeybd_write ( struct file * filp, const char *buf, size_t count,
                         }
                         else
                         {
-                                fake_key ( localbuf[i] );
+                                swkeybd_fakeKey ( localbuf[i] );
                         }
                 }
         }
@@ -487,19 +496,24 @@ ssize_t swkeybd_write ( struct file * filp, const char *buf, size_t count,
         return count;
 }
 
-struct file_operations swkeybd_file_operations = {
-      write:swkeybd_write,
-      poll:swkeybd_poll,
-      open:swkeybd_open,
-      release:swkeybd_release,
-};
-
+/*
+ * Name:        set_keycodes
+ *
+ * Description: 
+ *
+ */
 void set_keycodes ( int in, int out )
 {
         keycodes[in] = out;
         set_bit ( out, swkeybd.idev->keybit );
 }
 
+/*
+ * Name:        init_keycodes
+ *
+ * Description: 
+ *
+ */
 void init_keycodes ( void )
 {
         memset ( keycodes, 0, 512 );
@@ -603,3 +617,11 @@ void init_keycodes ( void )
         set_bit ( KEY_LEFTBRACE, swkeybd.idev->keybit );
         set_bit ( KEY_RIGHTBRACE, swkeybd.idev->keybit );
 }
+
+/* file operation-handlers for /dev/swkeybd */
+struct file_operations swkeybd_file_operations = {
+      write:swkeybd_write,
+      poll:swkeybd_poll,
+      open:swkeybd_open,
+      release:swkeybd_release,
+};
