@@ -63,8 +63,11 @@ MODULE_PARM_DESC ( xmax, "nominal screen-width (default 1280)" );
 MODULE_PARM_DESC ( ymax, "nominal screen-height (default 800)" );
 
 struct file_operations swmouse_file_operations;
-int swmouse_open_simple ( struct input_dev *dev );
-void swmouse_release_simple ( struct input_dev *dev );
+int swm_open_simple ( struct input_dev *dev );
+void swm_release_simple ( struct input_dev *dev );
+int swm_read_procmem ( char *buf, char **start, off_t offset,
+                           int count, int *eof, void *data );
+
 
 struct swmouse_device
 {
@@ -85,35 +88,6 @@ struct miscdevice swmouse_misc = {
       name:"swmouse",
       fops:&swmouse_file_operations,
 };
-
-/**
- * Name:        swmouse_read_procmem
- *
- * Description: invoked when reading from /proc/swmouse
- *
- */
-int swmouse_read_procmem ( char *buf, char **start, off_t offset,
-                           int count, int *eof, void *data )
-{
-        static char internal_buf[128];
-        static int len;
-
-        len = sprintf ( internal_buf, "swmouse:%d;%d;%d;%d,%d,%d\n",
-                        swmouse.ups, swmouse.downs,
-                        swmouse.lefts, swmouse.rights,
-                        swmouse.fixed_x, swmouse.fixed_y );
-
-        if ( len <= count )
-        {
-                strcpy ( buf, internal_buf );
-                return len;
-        }
-        else
-        {
-                return 0;
-        }
-        return 0;
-}
 
 /**
  * Name:        init_module
@@ -171,8 +145,8 @@ int init_module ( void )
                 swmouse.idev->id.product = 0x00;
                 swmouse.idev->id.version = 0x00;
 
-                swmouse.idev->open = swmouse_open_simple;
-                swmouse.idev->close = swmouse_release_simple;
+                swmouse.idev->open = swm_open_simple;
+                swmouse.idev->close = swm_release_simple;
 
                 /* set event-bits */
                 swmouse.idev->evbit[0] =
@@ -206,7 +180,7 @@ int init_module ( void )
                 /* create the /proc entry */
                 create_proc_read_entry ( "swmouse", 0 /* default mode */ ,
                                          NULL /* parent dir */ ,
-                                         swmouse_read_procmem,
+                                         swm_read_procmem,
                                          NULL /* client data */  );
                 printk ( KERN_INFO "swmouse: proc entry created\n" );
 
@@ -231,62 +205,91 @@ void cleanup_module ( void )
 }
 
 /**
- * Name:        swmouse_open
+ * Name:        read_procmem
+ *
+ * Description: invoked when reading from /proc/swmouse
+ *
+ */
+int swm_read_procmem ( char *buf, char **start, off_t offset,
+                           int count, int *eof, void *data )
+{
+        static char internal_buf[128];
+        static int len;
+
+        len = sprintf ( internal_buf, "swmouse:%d;%d;%d;%d,%d,%d\n",
+                        swmouse.ups, swmouse.downs,
+                        swmouse.lefts, swmouse.rights,
+                        swmouse.fixed_x, swmouse.fixed_y );
+
+        if ( len <= count )
+        {
+                strcpy ( buf, internal_buf );
+                return len;
+        }
+        else
+        {
+                return 0;
+        }
+        return 0;
+}
+
+/**
+ * Name:        open
  *
  * Description: invoked when fake-device is opened
  *
  */
-int swmouse_open ( struct inode *inode, struct file *filp )
+int swm_open ( struct inode *inode, struct file *filp )
 {
-        printk ( KERN_INFO "swmouse: open\n" );
+        /*printk ( KERN_INFO "swmouse: open\n" );*/
         /* Ok */
         return 0;
 }
 
 /**
- * Name:        swmouse_release
+ * Name:        release
  *
  * Description: invoked when fake-device is released
  *
  */
-int swmouse_release ( struct inode *inode, struct file *filp )
+int swm_release ( struct inode *inode, struct file *filp )
 {
-        printk ( KERN_INFO "swmouse: releas\n" );
+        /*printk ( KERN_INFO "swmouse: releas\n" );*/
         return 0;
 }
 
 /**
- * Name:        swmouse_open_simple
+ * Name:        open_simple
  *
  * Description: invoked when fake-device is opened
  *
  */
-int swmouse_open_simple ( struct input_dev *dev )
+int swm_open_simple ( struct input_dev *dev )
 {
-        printk ( KERN_INFO "swmouse: open_simple\n" );
+        /*printk ( KERN_INFO "swmouse: open_simple\n" );*/
         /* Ok */
         return 0;
 }
 
 /**
- * Name:        swmouse_release_simple
+ * Name:        release_simple
  *
  * Description: invoked when fake-device is released
  *
  */
-void swmouse_release_simple ( struct input_dev *dev )
+void swm_release_simple ( struct input_dev *dev )
 {
-        printk ( KERN_INFO "swmouse: release_simple\n" );
+        /*printk ( KERN_INFO "swmouse: release_simple\n" );*/
         return;
 }
 
 /**
- * Name:        swmouse_write
+ * Name:        write
  *
  * Description: write accepts data and converts it to mouse movement
  *
  */
-ssize_t swmouse_write ( struct file * filp, const char *buf, size_t count,
+ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
                         loff_t * offp )
 {
 #define BUF_SIZE 32
@@ -468,9 +471,9 @@ ssize_t swmouse_write ( struct file * filp, const char *buf, size_t count,
    various operations on the device */
 struct file_operations swmouse_file_operations = {
         .owner = THIS_MODULE,
-        .write = swmouse_write,
-        .open = swmouse_open,
-        .release = swmouse_release,
+        .write = swm_write,
+        .open = swm_open,
+        .release = swm_release,
 };
 
 /* Test function:
