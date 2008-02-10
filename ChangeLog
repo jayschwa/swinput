@@ -1,3 +1,13 @@
+2008-02-10  Daniel Hiepler <rigid@boogiepalace.hopto.org>
+        * swmouse.c:
+        changed swmouse_ prefix for routines to swm_
+        implemented "devs" module parameter to support multiple devices
+        commented verbosity routines out again. too noisy. has been done
+        already.
+        fixed "direction" bug (i did in one of the last changes)
+        * swinput.c
+        added file for routines common to all modules
+        
 2008-02-04  Daniel Hiepler <rigid@boogiepalace.hopto.org>
 
 	* swmouse.c:
