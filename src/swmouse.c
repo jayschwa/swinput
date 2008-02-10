@@ -44,35 +44,43 @@
 #include <linux/moduleparam.h>
 #include <asm/uaccess.h>
 
+#define SWINPUT_DEBUG
+
 #include "swinput.h"
 
 MODULE_DESCRIPTION ( "Fake-mouse input device" );
 MODULE_AUTHOR ( "Henrik Sandklef  <hesa@gnu.org>" );
 MODULE_LICENSE ( "GPL" );
 
+
+
+#define MODULE_NAME "swmouse"
 #define XMAX 1280
 #define YMAX 800
 
 /* screen-resolutions */
-static int xmax, ymax;
+static int xmax, ymax, devs;
 
 /* module parameters */
 module_param ( xmax, int, 0444 );
 module_param ( ymax, int, 0444 );
+module_param ( devs, int, 0444 );
 MODULE_PARM_DESC ( xmax, "nominal screen-width (default 1280)" );
 MODULE_PARM_DESC ( ymax, "nominal screen-height (default 800)" );
+MODULE_PARM_DESC ( devs, "how many mice to emulate (maximum 16, default 1)" );
 
 struct file_operations swmouse_file_operations;
 int swm_open_simple ( struct input_dev *dev );
 void swm_release_simple ( struct input_dev *dev );
 int swm_read_procmem ( char *buf, char **start, off_t offset,
-                           int count, int *eof, void *data );
-
+                       int count, int *eof, void *data );
+void cleanup_devices ( int dev );
 
 struct swmouse_device
 {
         /* input device, to push out input  data */
         struct input_dev *idev;
+        int misc_reg, input_reg;
 
         /* statistic counters */
         int fixed_x;
@@ -81,13 +89,9 @@ struct swmouse_device
         int downs;
         int lefts;
         int rights;
-} swmouse;
+} swmouse[MAX_DEVNUM];
 
-struct miscdevice swmouse_misc = {
-      minor:MISC_DYNAMIC_MINOR,
-      name:"swmouse",
-      fops:&swmouse_file_operations,
-};
+struct miscdevice swmouse_misc[MAX_DEVNUM];
 
 /**
  * Name:        init_module
@@ -98,9 +102,24 @@ struct miscdevice swmouse_misc = {
 int init_module ( void )
 {
         int retval = -1;
+        int dev;
+        char *name;
 
-        swinput_debugs ( "swmouse: Initializing...\n" );
+        printk ( KERN_INFO "swmouse: initializing...\n" );
 
+        /* amount of devices to emulate */
+        if ( devs == 0 )
+                devs = 1;
+
+        if ( devs > MAX_DEVNUM )
+        {
+                printk ( KERN_INFO
+                         "swmouse: a maximum of %d devices are supported -\n"
+                         "swmouse: recompile to increase that.\n", MAX_DEVNUM );
+                devs = MAX_DEVNUM;
+        }
+
+        /* boundaries */
         if ( xmax == 0 )
                 xmax = XMAX;
         if ( ymax == 0 )
@@ -108,85 +127,165 @@ int init_module ( void )
 
         if ( xmax < 0 )
         {
-                printk ( KERN_INFO
-                         "swmouse: xmax must be > 0. Using default.\n" );
+                swinput_debugs ( KERN_INFO
+                                 "xmax must be > 0. Using default.\n" );
                 xmax = XMAX;
         }
 
         if ( ymax < 0 )
         {
-                printk ( KERN_INFO
-                         "swmouse: ymax must be > 0. Using default.\n" );
+                swinput_debugs ( KERN_INFO
+                                 "ymax must be > 0. Using default.\n" );
                 ymax = YMAX;
         }
 
-        memset ( &swmouse, 0, sizeof ( struct swmouse_device ) );
-
-        swmouse.idev = input_allocate_device (  );
-
-        if ( swmouse.idev )
+        /* initialize every device */
+        for ( dev = 0; dev < devs; dev++ )
         {
+
+                /* clear memory of local structure */
+                memset ( &swmouse[dev], 0, sizeof ( struct swmouse_device ) );
+                memset ( &swmouse_misc[dev], 0, sizeof ( struct miscdevice ) );
+
+                (&swmouse[dev])->idev = input_allocate_device (  );
+
+                if ( swmouse[dev].idev == NULL)
+                {
+                        swinput_debugs(KERN_INFO "failed to allocate input device\n");
+                        retval = -EFAULT;
+                        goto im_error;
+                }
+
+                /* initialize misc-device structure */
+                ( &swmouse_misc[dev] )->minor = MISC_DYNAMIC_MINOR;
+                ( &swmouse_misc[dev] )->fops = &swmouse_file_operations;
+
+                /* build device name */
+                if ( ( name =
+                       kmalloc ( GFP_KERNEL,
+                                 sizeof ( MODULE_NAME ) + 2 ) ) ==
+                     NULL )
+                {
+                        swinput_debugs ( KERN_INFO
+                                         "failed to allocate memory\n" );
+                        retval = -ENOMEM;
+                        goto im_error;
+                }
+
+                ( &swmouse_misc[dev] )->name = name;
+
+                snprintf ( name, sizeof ( MODULE_NAME ) + 2, "%s%d",
+                           MODULE_NAME, dev );
+
                 /* 
                  * register our faker as a misc device
                  */
-                retval = misc_register ( &swmouse_misc );
+                retval = misc_register ( &swmouse_misc[dev] );
                 if ( retval != 0 )
                 {
                         /* return if failure ... */
-                        printk ( KERN_INFO
-                                 "swmouse: failed to register the swmouse as a misc device\n" );
-                        input_free_device ( swmouse.idev );
-                        return retval;
+                        swinput_debugs ( KERN_INFO
+                                         "failed to register the swmouse as a misc device\n" );
+                        goto im_error;
                 }
 
-                /* set the name */
-                swmouse.idev->name = "swmouse";
-                swmouse.idev->id.vendor = 0x00;
-                swmouse.idev->id.product = 0x00;
-                swmouse.idev->id.version = 0x00;
+                swmouse[dev].misc_reg = 1;
 
-                swmouse.idev->open = swm_open_simple;
-                swmouse.idev->close = swm_release_simple;
+                /* set the name */
+                (&swmouse[dev])->idev->name = name;
+                (&swmouse[dev])->idev->id.vendor = 0x00;
+                (&swmouse[dev])->idev->id.product = 0x00;
+                (&swmouse[dev])->idev->id.version = 0x00;
+
+                (&swmouse[dev])->idev->open = swm_open_simple;
+                (&swmouse[dev])->idev->close = swm_release_simple;
 
                 /* set event-bits */
-                swmouse.idev->evbit[0] =
+                (&swmouse[dev])->idev->evbit[0] =
                         BIT ( EV_KEY ) | BIT ( EV_REL ) | BIT ( EV_ABS );
 
-                swmouse.idev->relbit[0] = BIT ( REL_Y ) | BIT ( REL_X );
+                (&swmouse[dev])->idev->relbit[0] =
+                        BIT ( REL_Y ) | BIT ( REL_X );
 
                 /* set bits for mouse-buttons */
-                swmouse.idev->keybit[LONG ( BTN_LEFT )] =
+                (&swmouse[dev])->idev->keybit[LONG ( BTN_LEFT )] =
                         BIT ( BTN_LEFT ) | BIT ( BTN_MIDDLE ) |
                         BIT ( BTN_RIGHT );
 
-                swmouse.idev->keybit[LONG ( BTN_TOUCH )] = BIT ( BTN_TOUCH );
 
-                input_set_abs_params ( swmouse.idev, ABS_X, 0, xmax, 0, 0 );
-                input_set_abs_params ( swmouse.idev, ABS_Y, 0, ymax, 0, 0 );
+                input_set_abs_params ( (&swmouse[dev])->idev, ABS_X, 0,
+                                       xmax, 0, 0 );
+                input_set_abs_params ( (&swmouse[dev])->idev, ABS_Y, 0,
+                                       ymax, 0, 0 );
 
                 /* register the device to the input system */
-                if ( input_register_device ( swmouse.idev ) )
+                if ( input_register_device ( (&swmouse[dev])->idev ) )
                 {
-                        printk ( KERN_INFO
-                                 "swmouse: Unable to register input device!\n" );
-                        input_free_device ( swmouse.idev );
-                        return -1;
+                        swinput_debugs ( KERN_INFO
+                                         "Unable to register input device!\n" );
+                        retval = -EFAULT;
+                        goto im_error;
                 }
 
-                printk ( KERN_INFO
-                         "swmouse: module registered (xmax: %d, ymax: %d)\n",
-                         xmax, ymax );
+                (&swmouse[dev])->input_reg = 1;
 
-                /* create the /proc entry */
-                create_proc_read_entry ( "swmouse", 0 /* default mode */ ,
-                                         NULL /* parent dir */ ,
-                                         swm_read_procmem,
-                                         NULL /* client data */  );
-                printk ( KERN_INFO "swmouse: proc entry created\n" );
+                
+                
 
         }
 
+        /* create the /proc entry */
+        if ( create_proc_read_entry ( MODULE_NAME, 0 /* default mode */ ,
+                                      NULL /* parent dir */ ,
+                                      swm_read_procmem,
+                                      NULL /* client data */  ) ==
+             NULL )
+        {
+                swinput_debugs ( KERN_INFO "failed to create proc entry\n" );
+        }
+
+        printk ( KERN_INFO
+                 "swmouse: module loaded (xmax: %d, ymax: %d, devs: %d)\n",
+                 xmax, ymax, devs );
+
         return retval;
+
+      im_error:
+        cleanup_devices ( dev );
+        return retval;
+}
+
+/**
+ * Name:        cleanup_devices
+ *
+ * Description: clean up all devices in swmouse[] and swmouse_misc[]
+ *
+ */
+void cleanup_devices ( int dev )
+{
+        int c;
+
+        for ( c = 0; c < dev; c++ )
+        {
+                                
+                if ( (&swmouse[c])->input_reg )
+                {
+                        swinput_debugs("unregistering input-device\n");
+                        input_unregister_device ( (&swmouse[c])->idev );
+                }
+                if ( (&swmouse[c])->idev )
+                {
+                        swinput_debugs("freeing input-device\n");
+                        input_free_device ( (&swmouse[c])->idev );
+                }
+                if ( (&swmouse[c])->misc_reg )
+                {
+                        swinput_debugs("deregistering misc-device\n");
+                        misc_deregister ( (&swmouse_misc[c]) );
+                }
+                if ( swmouse_misc[c].name )
+                        kfree ( (&swmouse_misc[c])->name );
+        }
 }
 
 /**
@@ -197,11 +296,11 @@ int init_module ( void )
  */
 void cleanup_module ( void )
 {
-        input_unregister_device ( swmouse.idev );
-        input_free_device ( swmouse.idev );
-        misc_deregister ( &swmouse_misc );
-        remove_proc_entry ( "swmouse", NULL /* parent dir */  );
+
+        cleanup_devices ( devs );
+        remove_proc_entry ( MODULE_NAME, NULL /* parent dir */  );
         printk ( KERN_INFO "swmouse: module unregistered\n" );
+
 }
 
 /**
@@ -211,26 +310,44 @@ void cleanup_module ( void )
  *
  */
 int swm_read_procmem ( char *buf, char **start, off_t offset,
-                           int count, int *eof, void *data )
+                       int count, int *eof, void *data )
 {
-        static char internal_buf[128];
-        static int len;
+        static char internal_buf[128 * MAX_DEVNUM];
+        char *tmp = ( char * ) &internal_buf;
+        int len, all = 0;
+        int dev;
 
-        len = sprintf ( internal_buf, "swmouse:%d;%d;%d;%d,%d,%d\n",
-                        swmouse.ups, swmouse.downs,
-                        swmouse.lefts, swmouse.rights,
-                        swmouse.fixed_x, swmouse.fixed_y );
-
-        if ( len <= count )
+        if ( offset > 0 )
         {
-                strcpy ( buf, internal_buf );
-                return len;
-        }
-        else
-        {
+                /* we have finished to read, return 0 */
                 return 0;
         }
-        return 0;
+
+        /* build statistics for all devices */
+        for ( dev = 0; dev < devs; dev++ )
+        {
+
+                len = snprintf ( tmp, ( 128 * MAX_DEVNUM ) - all,
+                                 "swmouse%d:%d;%d;%d;%d,%d,%d\n", dev,
+                                 swmouse[dev].ups, swmouse[dev].downs,
+                                 swmouse[dev].lefts, swmouse[dev].rights,
+                                 swmouse[dev].fixed_x, swmouse[dev].fixed_y );
+                tmp += len;
+                all += len;
+        }
+
+        /* more than we can take? */
+        if ( all > sizeof ( internal_buf ) )
+                all = sizeof ( internal_buf );
+
+        /* less requested than we got? */
+        if ( count < all )
+                all = count;
+
+        /* copy buffer */
+        memcpy ( buf, internal_buf, all );
+
+        return all;
 }
 
 /**
@@ -241,7 +358,7 @@ int swm_read_procmem ( char *buf, char **start, off_t offset,
  */
 int swm_open ( struct inode *inode, struct file *filp )
 {
-        /*printk ( KERN_INFO "swmouse: open\n" );*/
+        /*printk ( KERN_INFO "swmouse: open\n" ); */
         /* Ok */
         return 0;
 }
@@ -254,7 +371,7 @@ int swm_open ( struct inode *inode, struct file *filp )
  */
 int swm_release ( struct inode *inode, struct file *filp )
 {
-        /*printk ( KERN_INFO "swmouse: releas\n" );*/
+        /*printk ( KERN_INFO "swmouse: releas\n" ); */
         return 0;
 }
 
@@ -266,7 +383,7 @@ int swm_release ( struct inode *inode, struct file *filp )
  */
 int swm_open_simple ( struct input_dev *dev )
 {
-        /*printk ( KERN_INFO "swmouse: open_simple\n" );*/
+        /*printk ( KERN_INFO "swmouse: open_simple\n" ); */
         /* Ok */
         return 0;
 }
@@ -279,7 +396,7 @@ int swm_open_simple ( struct input_dev *dev )
  */
 void swm_release_simple ( struct input_dev *dev )
 {
-        /*printk ( KERN_INFO "swmouse: release_simple\n" );*/
+        /*printk ( KERN_INFO "swmouse: release_simple\n" ); */
         return;
 }
 
@@ -290,20 +407,31 @@ void swm_release_simple ( struct input_dev *dev )
  *
  */
 ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
-                        loff_t * offp )
+                    loff_t * offp )
 {
 #define BUF_SIZE 32
         static char localbuf[BUF_SIZE];
         char letter;
         char *tmp;
+        const char *name;
         int nrs;
         int direction = -1;
         int is_abs = 0;
         int pix = 0;
+        int dev = 0;
 
         if ( count == 0 )
         {
                 return 0;
+        }
+
+        name = ( const char * ) ( filp->f_path.dentry->d_name.name );
+
+        /* guess device from name */
+        if ( sscanf ( name, MODULE_NAME "%d", &dev ) == 0 )
+        {
+                printk ( KERN_INFO "swmouse: unknown device: \"%s\"\n", name );
+                return count;
         }
 
         /* accept BUF_SIZE bytes at a time, at most */
@@ -312,7 +440,8 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         if ( copy_from_user ( localbuf, buf, count ) != 0 )
         {
                 /* copy_from_user() failed */
-                printk ( KERN_INFO "swmouse: copy_from_user() failed!\n" );
+                printk ( KERN_INFO "swmouse%d: copy_from_user() failed!\n",
+                         dev );
 
                 /* silently ignore */
                 return count;
@@ -355,8 +484,8 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         if ( !sscanf ( tmp, "%d", &nrs ) < 0 )
         {
                 printk ( KERN_INFO
-                         "swmouse: problems converting %s (tmp=%s   nrs=%d)\n",
-                         localbuf, tmp, nrs );
+                         "swmouse%d: problems converting %s (tmp=%s   nrs=%d)\n",
+                         dev, localbuf, tmp, nrs );
                 return count;
         }
 
@@ -367,7 +496,7 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         case 'U':
                 if ( ( nrs <= 0 ) || ( nrs > ymax ) )
                         nrs = 1;
-                swmouse.ups += nrs;
+                (&swmouse[dev])->ups += nrs;
                 direction = REL_Y;
                 pix = 0 - nrs;
                 break;
@@ -377,7 +506,7 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         case 'D':
                 if ( ( nrs <= 0 ) || ( nrs > ymax ) )
                         nrs = 1;
-                swmouse.downs += nrs;
+                (&swmouse[dev])->downs += nrs;
                 direction = REL_Y;
                 pix = nrs;
                 break;
@@ -387,9 +516,9 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         case 'L':
                 if ( ( nrs <= 0 ) || ( nrs > xmax ) )
                         nrs = 1;
+                (&swmouse[dev])->lefts += nrs;
                 direction = REL_X;
                 pix = 0 - nrs;
-                swmouse.lefts += nrs;
                 break;
 
                 /* right */
@@ -397,7 +526,7 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         case 'R':
                 if ( ( nrs <= 0 ) || ( nrs > xmax ) )
                         nrs = 1;
-                swmouse.rights += nrs;
+                (&swmouse[dev])->rights += nrs;
                 direction = REL_X;
                 pix = nrs;
                 break;
@@ -407,7 +536,7 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         case 'X':
                 if ( ( nrs <= 0 ) || ( nrs > xmax ) )
                         nrs = 1;
-                swmouse.fixed_x++;
+                (&swmouse[dev])->fixed_x++;
                 is_abs = 1;
                 direction = ABS_X;
                 pix = nrs;
@@ -418,7 +547,7 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         case 'Y':
                 if ( ( nrs <= 0 ) || ( nrs > ymax ) )
                         nrs = 1;
-                swmouse.fixed_y++;
+                (&swmouse[dev])->fixed_y++;
                 is_abs = 1;
                 direction = ABS_Y;
                 pix = nrs;
@@ -426,42 +555,44 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
 
                 /* home */
         case '0':
-                swmouse.fixed_x = 0;
-                swmouse.fixed_y = 0;
-                swmouse.rights = 0;
-                swmouse.lefts = 0;
-                swmouse.downs = 0;
-                swmouse.ups = 0;
+                (&swmouse[dev])->fixed_x = 0;
+                (&swmouse[dev])->fixed_y = 0;
+                (&swmouse[dev])->rights = 0;
+                (&swmouse[dev])->lefts = 0;
+                (&swmouse[dev])->downs = 0;
+                (&swmouse[dev])->ups = 0;
                 pix = 0;
                 break;
 
         default:
+                printk(KERN_INFO "swmouse: unknown token\n");
                 ;
         }
 
+                
         /* done a valid movement? */
-        if ( direction > 0 )
+        if ( direction >= 0)
         {
                 /* absolute movement ... */
                 if ( is_abs )
                 {
-                        swinput_debug ( "input_report_abs(%d", direction );
-                        swinput_debug ( ",%d)\n", pix );
-                        input_report_abs ( swmouse.idev, direction, 0 );
-                        input_sync ( swmouse.idev );
-                        input_sync ( swmouse.idev );
-                        input_report_abs ( swmouse.idev, direction, pix );
+                        printk ( "swmouse%d: input_report_abs(%d,%d)\n", dev,
+                                 direction, pix );
+                        input_report_abs ( (&swmouse[dev])->idev, direction, 0 );
+                        input_sync ( (&swmouse[dev])->idev );
+                        input_sync ( (&swmouse[dev])->idev );
+                        input_report_abs ( (&swmouse[dev])->idev, direction, pix );
                 }
 
                 /* relative movement ... */
                 else
                 {
-                        swinput_debug ( "input_report_rel(%d,", direction );
-                        swinput_debug ( "%d)\n", pix );
-                        input_report_rel ( swmouse.idev, direction, pix );
+                        printk ( "swmouse%d: input_report_rel(%d,%d)\n", dev,
+                                 direction, pix );
+                        input_report_rel ( (&swmouse[dev])->idev, direction, pix );
                 }
 
-                input_sync ( swmouse.idev );
+                input_sync ( (&swmouse[dev])->idev );
         }
 
         return count;
