@@ -424,6 +424,8 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         int dev = 0;
         int button = 0;
         int button_state = 0;
+	int mice_number;
+	int ret;
 
         if ( count == 0 )
         {
@@ -433,11 +435,15 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         name = ( const char * ) ( filp->f_path.dentry->d_name.name );
 
         if((dev = swm_devFromName(filp)) < 0)
-                return count;
+	  {
+	    return count;
+	  }
 
         /* accept BUF_SIZE bytes at a time, at most */
         if ( count > BUF_SIZE )
-                count = BUF_SIZE;
+	  {
+	    count = BUF_SIZE;
+	  }
 
         if ( copy_from_user ( localbuf, buf, count ) != 0 )
         {
@@ -463,32 +469,24 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
                 tmp++;
         }
 
-        /* Save char to get direction later on */
-        letter = tmp[0];
+        ret = sscanf ( tmp, "%d:%c:%d", 
+		       &mice_number, 
+		       &letter,
+		       &nrs ) ;
+         if ( ret != 3 ) 
+         { 
+                 printk ( "swmouse%d - problems converting %s\n", dev, localbuf); 
+                 return count; 
+         } 
+	printk ( "swmouse: mouse:%d (of %d)  direction:%c   pixels:%d   (ret=%d)\n",
+		 mice_number, nrofmice, letter, nrs, ret ); 
 
-        /* Go to next character */
-        if ( tmp != NULL )
-        {
-                tmp++;
-        }
 
-        /* Remove leading blanks ... */
-        while ( ( tmp != NULL ) && ( tmp[0] == ' ' ) )
-        {
-                tmp++;
-        }
-
-        /* Remove "=" if any */
-        if ( ( tmp != NULL ) && ( tmp[0] == '=' ) )
-        {
-                tmp++;
-        }
-
-        if ( !sscanf ( tmp, "%d", &nrs ) < 0 )
-        {
-                debug ( "swmouse%d - problems converting %s (tmp=%s   nrs=%d)\n", dev, localbuf, tmp, nrs );
-                return count;
-        }
+/*         if ( !sscanf ( tmp, "%d", &nrs ) < 0 ) */
+/*         { */
+/*                 debug ( "swmouse%d - problems converting %s (tmp=%s   nrs=%d)\n", dev, localbuf, tmp, nrs ); */
+/*                 return count; */
+/*         } */
 
         switch ( letter )
         {
