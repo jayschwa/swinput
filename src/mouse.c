@@ -9,7 +9,7 @@
  *  Copyright (c) 2003-2007 Henrik Sandklef <hesa@gnu.org> 
  *                2008 Henrik Sandklef <hesa@gnu.org>, 
  *                     Daniel Hiepler <rigid@boogiepalace.hopto.org>
- *                                                                   
+ *                2010 Henrik Sandklef <hesa@gnu.org>
  * This program is free software; you can redistribute it and/or     
  * modify it under the terms of the GNU General Public License       
  * as published by the Free Software Foundation; either version 2    
@@ -61,7 +61,7 @@ MODULE_LICENSE ( "GPL" );
 //#endif
 
 /* screen-resolutions */
-static int xmax, ymax, devs;
+static int xmax, ymax, devs, nrofmice;
 static int log = 1;
 
 /* module parameters */
@@ -69,10 +69,12 @@ module_param ( xmax, int, 0444 );
 module_param ( ymax, int, 0444 );
 module_param ( devs, int, 0444 );
 module_param ( log, int, 0444 );
+module_param ( nrofmice, int, 0444 );
 MODULE_PARM_DESC ( xmax, "nominal screen-width (default 1280)" );
 MODULE_PARM_DESC ( ymax, "nominal screen-height (default 800)" );
 MODULE_PARM_DESC ( devs, "how many mice to emulate (maximum 16, default 1)" );
 MODULE_PARM_DESC ( log, "0=quiet, 1=verbose, 2=debug (default 1)" );
+MODULE_PARM_DESC ( nrofmice, "Define how many mice you want to use (defaults to 10)" );
 
 struct file_operations swmouse_file_operations;
 int swm_read_procmem ( char *buf, char **start, off_t offset,
