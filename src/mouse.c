@@ -338,11 +338,15 @@ int swm_read_procmem ( char *buf, char **start, off_t offset,
 
         /* more than we can take? */
         if ( all > sizeof ( internal_buf ) )
-                all = sizeof ( internal_buf );
+	  {
+	    all = sizeof ( internal_buf );
+	  }
 
         /* less requested than we got? */
         if ( count < all )
-                all = count;
+	  {
+	    all = count;
+	  }
 
         /* copy buffer */
         memcpy ( buf, internal_buf, all );
