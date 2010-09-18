@@ -194,7 +194,7 @@ int init_module ( void )
                 ( &swmouse[dev] )->misc_reg = 1;
 
                 /* set the name */
-                ( &swmouse[dev] )->idev->name = "Fake mouse device";
+                ( &swmouse[dev] )->idev->name = "swinput faked mouse device";
                 ( &swmouse[dev] )->idev->id.vendor = 0x00;
                 ( &swmouse[dev] )->idev->id.product = 0x00;
                 ( &swmouse[dev] )->idev->id.version = 0x00;
@@ -203,12 +203,23 @@ int init_module ( void )
                 ( &swmouse[dev] )->idev->close = swm_release_simple;*/
 
                 /* set event-bits */
+		if (0)
+		  {
                 set_bit ( EV_KEY, ( &swmouse[dev] )->idev->evbit );
                 set_bit ( EV_REL, ( &swmouse[dev] )->idev->evbit );
                 set_bit ( EV_ABS, ( &swmouse[dev] )->idev->evbit );
+		  }
+		( &swmouse[dev] )->idev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) ;
 
                 set_bit ( REL_X, ( &swmouse[dev] )->idev->relbit );
                 set_bit ( REL_Y, ( &swmouse[dev] )->idev->relbit );
+
+		if (0)
+		  {
+                set_bit ( ABS_X, ( &swmouse[dev] )->idev->relbit );
+                set_bit ( ABS_Y, ( &swmouse[dev] )->idev->relbit );
+		  }
+
 
                 /* set bits for mouse-buttons */
                 set_bit ( BTN_LEFT, ( &swmouse[dev] )->idev->keybit );
@@ -216,10 +227,13 @@ int init_module ( void )
                 set_bit ( BTN_RIGHT, ( &swmouse[dev] )->idev->keybit );
                 
                 
-                input_set_abs_params ( ( &swmouse[dev] )->idev, ABS_X, 0,
-                                       xmax, 0, 0 );
-                input_set_abs_params ( ( &swmouse[dev] )->idev, ABS_Y, 0,
-                                       ymax, 0, 0 );
+		printk ("Using abs %d %d %d %d %d\n",ABS_X, 0,
+                                       xmax, 0, 0 ); 
+                input_set_abs_params ( (&swmouse[dev])->idev, ABS_X, 0,
+                                       xmax, 4, 8 );
+
+                input_set_abs_params ( (&swmouse[dev])->idev, ABS_Y, 0,
+                                       ymax, 4, 8 );
 
 
                 /* register the device to the input system */
@@ -418,14 +432,15 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         char *tmp;
         const char *name;
         int nrs;
+        int nrs_2;
         int direction = -1;
         int is_abs = 0;
         int pix = 0;
+        int pix_x = 0;
+        int pix_y = 0;
         int dev = 0;
         int button = 0;
         int button_state = 0;
-	int mice_number;
-	int ret;
 
         if ( count == 0 )
         {
@@ -435,15 +450,11 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         name = ( const char * ) ( filp->f_path.dentry->d_name.name );
 
         if((dev = swm_devFromName(filp)) < 0)
-	  {
-	    return count;
-	  }
+                return count;
 
         /* accept BUF_SIZE bytes at a time, at most */
         if ( count > BUF_SIZE )
-	  {
-	    count = BUF_SIZE;
-	  }
+                count = BUF_SIZE;
 
         if ( copy_from_user ( localbuf, buf, count ) != 0 )
         {
@@ -469,24 +480,33 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
                 tmp++;
         }
 
-        ret = sscanf ( tmp, "%d:%c:%d", 
-		       &mice_number, 
-		       &letter,
-		       &nrs ) ;
-         if ( ret != 3 ) 
-         { 
-                 printk ( "swmouse%d - problems converting %s\n", dev, localbuf); 
-                 return count; 
-         } 
-	printk ( "swmouse: mouse:%d (of %d)  direction:%c   pixels:%d   (ret=%d)\n",
-		 mice_number, nrofmice, letter, nrs, ret ); 
+        /* Save char to get direction later on */
+        letter = tmp[0];
 
+        /* Go to next character */
+        if ( tmp != NULL )
+        {
+                tmp++;
+        }
 
-/*         if ( !sscanf ( tmp, "%d", &nrs ) < 0 ) */
-/*         { */
-/*                 debug ( "swmouse%d - problems converting %s (tmp=%s   nrs=%d)\n", dev, localbuf, tmp, nrs ); */
-/*                 return count; */
-/*         } */
+        /* Remove leading blanks ... */
+        while ( ( tmp != NULL ) && ( tmp[0] == ' ' ) )
+        {
+                tmp++;
+        }
+
+        /* Remove "=" if any */
+        if ( ( tmp != NULL ) && ( tmp[0] == '=' ) )
+        {
+                tmp++;
+        }
+
+        if ( !sscanf ( tmp, "%d %d", &nrs, &nrs_2 ) < 0 )
+        {
+                debug ( "swmouse%d - problems converting %s (tmp=%s   nrs=%d nrs-2=%d)\n", 
+			dev, localbuf, tmp, nrs , nrs_2 );
+                return count;
+        }
 
         switch ( letter )
         {
@@ -549,12 +569,14 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
                 /* absolute x position */
         case 'x':
         case 'X':
+	  
                 if ( ( nrs <= 0 ) || ( nrs > xmax ) )
                         nrs = 1;
                 ( &swmouse[dev] )->fixed_x++;
                 is_abs = 1;
                 direction = ABS_X;
-                pix = nrs;
+                pix_x = nrs;
+		printk ( KERN_INFO "swmouse: abs pos (X) %d\n", pix );
                 break;
 
                 /* absolute y position */
@@ -565,7 +587,19 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
                 ( &swmouse[dev] )->fixed_y++;
                 is_abs = 1;
                 direction = ABS_Y;
-                pix = nrs;
+                pix_y = nrs;
+                break;
+
+                /* home */
+        case 'a':
+        case 'A':
+                if ( ( nrs <= 0 ) || ( nrs > ymax ) )
+                        nrs = 1;
+                ( &swmouse[dev] )->fixed_y++;
+                is_abs = 1;
+                direction = ABS_Y;
+                pix_x = nrs;
+                pix_y = nrs_2;
                 break;
 
                 /* home */
@@ -621,18 +655,30 @@ ssize_t swm_write ( struct file * filp, const char *buf, size_t count,
         /* done a valid movement? */
         if ( direction >= 0 )
         {
+	  printk ( KERN_INFO "swmouse: about to move ... %d\n", is_abs );
                 
                 /* absolute movement ... */
-                if ( is_abs )
+                if ( is_abs !=0 )
                 {
-                        verbose ( "swmouse%d - input_report_abs(%d,%d)\n", dev,
-                                  direction, pix );
-                        input_report_abs ( ( &swmouse[dev] )->idev, direction,
+                        verbose ( "swmouse%d - input_report_abs(%d,%d  ) \n", dev,
+                                  pix_x,pix_y );
+
+                        verbose ( "swmouse%d: %d - %d ) \n", 
+				  dev, 
+				  ( &swmouse[dev] )->idev->absmin[ABS_X] ,
+				  ( &swmouse[dev] )->idev->absmax[ABS_X]);
+			/*                        input_report_abs ( ( &swmouse[dev] )->idev, 
+					   direction,
                                            0 );
-                        input_sync ( ( &swmouse[dev] )->idev );
-                        input_sync ( ( &swmouse[dev] )->idev );
-                        input_report_abs ( ( &swmouse[dev] )->idev, direction,
-                                           pix );
+			*/
+
+                        input_report_abs ( ( &swmouse[dev] )->idev, 
+					   ABS_X,
+                                           pix_x );
+                        input_report_abs ( ( &swmouse[dev] )->idev, 
+					   ABS_Y,
+                                           pix_y );
+			input_sync ( ( &swmouse[dev] )->idev );
                 }
         
                 /* relative movement ... */
