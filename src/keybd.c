@@ -172,7 +172,7 @@ init_module (void)
 /*
  * Name:        cleanup_module
  *
- * Description: invoked when module is loaded
+ * Description: invoked when module is removed
  *
  */
 void
@@ -214,7 +214,7 @@ swkeybd_release (struct inode *inode, struct file *filp)
 /*
  * Name:        swkeybd_key
  *
- * Description: simulate keypress and keyrelease
+ * Description: simulate key press and key release
  *
  */
 #define swkeybd_key(key) swkeybd_keyPress(key); swkeybd_keyRelease(key);
@@ -222,7 +222,7 @@ swkeybd_release (struct inode *inode, struct file *filp)
 /*
  * Name:        swkeybd_keyPress
  *
- * Description: simulate keypress
+ * Description: simulate key press
  *
  */
 int
@@ -235,27 +235,13 @@ swkeybd_keyPress (int key)
 /*
  * Name:        swkeybd_keyRelease
  *
- * Description: simulate key-release
+ * Description: simulate key release
  *
  */
 int
 swkeybd_keyRelease (int key)
 {
   input_report_key (swkeybd.idev, key, 0);	/* release */
-  return 0;
-}
-
-/*
- * Name:        swkeybd_pressRelease
- *
- * Description: close releases the device, like swkeybd_disconnect
- *
- */
-int
-swkeybd_keyHit (int key)
-{
-  swkeybd_keyPress (key);	/* keypress */
-  swkeybd_keyRelease (key);	/* release */
   return 0;
 }
 
@@ -452,7 +438,7 @@ swkeybd_poll (struct file *filp, struct poll_table_struct *table)
 /*
  * Name:        swkeybd_write
  *
- * Description: write accepts data and converts it to mouse movement
+ * Description: write accepts data and converts it to key presses
  *
  */
 ssize_t

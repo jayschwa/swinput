@@ -197,9 +197,6 @@ init_module (void)
       (&swmouse[dev])->idev->id.product = 0x00;
       (&swmouse[dev])->idev->id.version = 0x00;
 
-      /*( &swmouse[dev] )->idev->open = swm_open_simple;
-         ( &swmouse[dev] )->idev->close = swm_release_simple; */
-
       /* set event-bits */
       if (0)
 	{
@@ -668,10 +665,6 @@ swm_write (struct file * filp, const char *buf, size_t count, loff_t * offp)
 		   dev,
 		   (&swmouse[dev])->idev->absmin[ABS_X],
 		   (&swmouse[dev])->idev->absmax[ABS_X]);
-	  /*                        input_report_abs ( ( &swmouse[dev] )->idev, 
-	     direction,
-	     0 );
-	   */
 
 	  input_report_abs ((&swmouse[dev])->idev, ABS_X, pix_x);
 	  input_report_abs ((&swmouse[dev])->idev, ABS_Y, pix_y);
@@ -700,10 +693,3 @@ struct file_operations swmouse_file_operations = {
   .open = swm_open,
   .release = swm_release,
 };
-
-/* Test function:
-     xy() {   echo "x $1" > /dev/swmouse ; echo "y $2" > /dev/swmouse ; sleep 2 ; XPOS=$(/home/hesa/gnu/xnee/cnee/test/src/xgetter  -mprx) ; YPOS=$( /home/hesa/gnu/xnee/cnee/test/src/xgetter  -mpry) ; echo "${1}x${2} ==> ${XPOS}x${YPOS}" ; }
-   
-
-   xy 1 2 
-*/
