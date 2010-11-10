@@ -53,7 +53,7 @@ logger (int detail, char *progname, const char *func, int line, char *logmsg,
 	...)
 {
   static char buf[1024] = { 0 };
-  va_list ap = NULL;
+  va_list ap;
 
 
   /* build logmsg */
