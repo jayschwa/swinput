@@ -285,6 +285,8 @@ swkeybd_fakeKey (char c)
       swkeybd_keyRelease (KEY_LEFTSHIFT);	/* keyrelease */
       swkeybd.shift_release++;
     }
+
+  input_sync (swkeybd.idev);
 }
 
 /**
@@ -353,7 +355,6 @@ fake_esc (char *str, int str_length)
     }
   else if (strncmp (str, "BACKSPACE", str_length) == 0)
     {
-      swinput_debugs (" Fakeing backspace ");
       swkeybd_key (KEY_BACKSPACE);
     }
   else if (strncmp (str, "ENTER", str_length) == 0)
@@ -388,25 +389,40 @@ fake_esc (char *str, int str_length)
     {
       swkeybd_key (KEY_UP);
     }
-  else if (strncmp (str, "CONTROL_DOWN", str_length) == 0)
+  else if (strncmp (str, "ALT_DOWN", str_length) == 0)
     {
-      swkeybd_key (KEY_LEFTCTRL);
+      swkeybd_keyPress (KEY_LEFTALT);
     }
-  else if (strncmp (str, "CONTROL_UP", str_length) == 0)
+  else if (strncmp (str, "ALT_UP", str_length) == 0)
     {
-      swkeybd_key (KEY_LEFTCTRL);
+      swkeybd_keyRelease (KEY_LEFTALT);
     }
-  else if (strncmp (str, "CONTROL", str_length) == 0)
+  else if (strncmp (str, "ALT", str_length) == 0)
+    {
+      swkeybd_key (KEY_LEFTALT);
+    }
+  else if (strncmp (str, "CONTROL_DOWN", str_length) == 0 ||
+	   strncmp (str, "CTRL_DOWN", str_length) == 0)
+    {
+      swkeybd_keyPress (KEY_LEFTCTRL);
+    }
+  else if (strncmp (str, "CONTROL_UP", str_length) == 0 ||
+	   strncmp (str, "CTRL_UP", str_length) == 0)
+    {
+      swkeybd_keyRelease (KEY_LEFTCTRL);
+    }
+  else if (strncmp (str, "CONTROL", str_length) == 0 ||
+	   strncmp (str, "CTRL", str_length) == 0)
     {
       swkeybd_key (KEY_LEFTCTRL);
     }
   else if (strncmp (str, "SHIFT_DOWN", str_length) == 0)
     {
-      swkeybd_key (KEY_LEFTSHIFT);
+      swkeybd_keyPress (KEY_LEFTSHIFT);
     }
   else if (strncmp (str, "SHIFT_UP", str_length) == 0)
     {
-      swkeybd_key (KEY_LEFTSHIFT);
+      swkeybd_keyRelease (KEY_LEFTSHIFT);
     }
   else if (strncmp (str, "SHIFT", str_length) == 0)
     {
@@ -419,6 +435,8 @@ fake_esc (char *str, int str_length)
       swkeybd.key_press = 0;
       swkeybd.key_release = 0;
     }
+
+  input_sync (swkeybd.idev);
 
   return 0;
 }
@@ -596,6 +614,7 @@ init_keycodes (void)
   set_bit (KEY_LEFTCTRL, swkeybd.idev->keybit);
   set_bit (KEY_RIGHTCTRL, swkeybd.idev->keybit);
   set_bit (KEY_LEFTALT, swkeybd.idev->keybit);
+  set_bit (KEY_RIGHTALT, swkeybd.idev->keybit);
 
   set_bit (KEY_CAPSLOCK, swkeybd.idev->keybit);
   set_bit (KEY_APOSTROPHE, swkeybd.idev->keybit);
