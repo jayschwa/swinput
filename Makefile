@@ -2,27 +2,33 @@ VERSION := 0.7.4
 KDIR   := /lib/modules/$(shell uname -r)/build
 PWD    := $(shell pwd)
 KERNEL := $(shell uname -r | sed 's,-[0-9\-]*,,g')
+KBUILD := $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src
 
-
+PHONY += default
 default:
-	cd src && $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src modules 
+	cd src && $(KBUILD) modules
 
+PHONY += clean
 clean:
-	cd src && make clean
+	cd src && $(KBUILD) clean
 
-install:
-	cd src && $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src modules modules_install && depmod -a
+PHONY += install
+install: default
+	cd src && $(KBUILD) modules_install && depmod -a
 
+PHONY += try
 try:
 	-sudo rmmod swmouse 
 	-sudo rmmod swkeybd
 	sudo insmod src/swmouse.ko && sudo insmod src/swkeybd.ko
 	sleep 1
-	sudo chmod a+rwx /dev/swkeybd /dev/swmouse
+	sudo chmod a+rw /dev/swkeybd /dev/swmouse0
 
+PHONY += check
 check:
 	cd test && ./all.sh
 
+PHONY += dist
 dist:
 	make clean
 	mkdir -p swinput-$(VERSION)/
@@ -43,3 +49,5 @@ dist:
 	tar cvf swinput-$(VERSION).tar   swinput-$(VERSION)/
 	gzip swinput-$(VERSION).tar 
 	gpg -b swinput-$(VERSION).tar.gz
+
+.PHONY: $(PHONY)
