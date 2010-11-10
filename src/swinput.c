@@ -10,7 +10,7 @@
 
 static struct swi_parser
 {
-        int state;
+  int state;
 } parser;
 
 /**
@@ -22,10 +22,11 @@ static struct swi_parser
  * @result 0 if state was set, <0 on invalid state-transition
  *
  */
-void parser_stateSet ( int state )
+void
+parser_stateSet (int state)
 {
-        /* set state */
-        parser.state = state;
+  /* set state */
+  parser.state = state;
 }
 
 /**
@@ -34,9 +35,10 @@ void parser_stateSet ( int state )
  * Description: returns the current state
  *
  */
-int parser_stateGet ( void )
+int
+parser_stateGet (void)
 {
-        return parser.state;
+  return parser.state;
 }
 
 
@@ -46,20 +48,22 @@ int parser_stateGet ( void )
  * Description: wrapper-function for printk (max. 1024 chars at all)
  *
  */
-void logger(int detail, char *progname, const char *func, int line, char *logmsg, ... )
+void
+logger (int detail, char *progname, const char *func, int line, char *logmsg,
+	...)
 {
-	static char buf[1024] = { 0 };
-	va_list ap = NULL;
-	
-	
-        /* build logmsg */
-        va_start(ap, logmsg);
-        vsnprintf(buf, 1024, logmsg, ap);
-        va_end(ap);
-                        
-        if(detail)
-                printk(KERN_INFO "%s: %s():%u: %s", progname, func, line, (char *) &buf);
-        else
-                printk(KERN_INFO "%s: %s", progname, (char *) &buf);
-        
+  static char buf[1024] = { 0 };
+  va_list ap = NULL;
+
+
+  /* build logmsg */
+  va_start (ap, logmsg);
+  vsnprintf (buf, 1024, logmsg, ap);
+  va_end (ap);
+
+  if (detail)
+    printk (KERN_INFO "%s: %s():%u: %s", progname, func, line, (char *) &buf);
+  else
+    printk (KERN_INFO "%s: %s", progname, (char *) &buf);
+
 }
