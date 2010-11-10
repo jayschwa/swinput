@@ -1,0 +1,15 @@
+TODO
+
+Fix existing commands. Mouse movement stuff doesn't appear to be working.
+
+Add support for mouse wheel.
+
+Add support for left vs right modifiers.
+
+Add auto-shifting for symbols and special characters.
+
+Update and fix documentation.
+
+Fix formatting problem for non-standard tab width. May want to consider picking
+a different style altogether.
+
