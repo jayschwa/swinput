@@ -1,7 +1,6 @@
 VERSION := 0.7.4
 KDIR   := /lib/modules/$(shell uname -r)/build
 PWD    := $(shell pwd)
-KERNEL := $(shell uname -r | sed 's,-[0-9\-]*,,g')
 KBUILD := $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src
 
 PHONY += default
