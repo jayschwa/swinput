@@ -573,6 +573,7 @@ init_keycodes (void)
   set_keycodes ('t', KEY_T);
   set_keycodes ('u', KEY_U);
   set_keycodes ('v', KEY_V);
+  set_keycodes ('w', KEY_W);
   set_keycodes ('x', KEY_X);
   set_keycodes ('y', KEY_Y);
   set_keycodes ('z', KEY_Z);
