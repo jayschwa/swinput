@@ -198,23 +198,16 @@ init_module (void)
       (&swmouse[dev])->idev->id.version = 0x00;
 
       /* set event-bits */
-      if (0)
-	{
-	  set_bit (EV_KEY, (&swmouse[dev])->idev->evbit);
-	  set_bit (EV_REL, (&swmouse[dev])->idev->evbit);
-	  set_bit (EV_ABS, (&swmouse[dev])->idev->evbit);
-	}
-      (&swmouse[dev])->idev->evbit[0] = BIT_MASK (EV_KEY) | BIT_MASK (EV_ABS);
+      set_bit (EV_KEY, (&swmouse[dev])->idev->evbit);
+      set_bit (EV_REL, (&swmouse[dev])->idev->evbit);
+      set_bit (EV_ABS, (&swmouse[dev])->idev->evbit);
 
       set_bit (REL_X, (&swmouse[dev])->idev->relbit);
       set_bit (REL_Y, (&swmouse[dev])->idev->relbit);
+      set_bit (REL_WHEEL, (&swmouse[dev])->idev->relbit);
 
-      if (0)
-	{
-	  set_bit (ABS_X, (&swmouse[dev])->idev->relbit);
-	  set_bit (ABS_Y, (&swmouse[dev])->idev->relbit);
-	}
-
+      set_bit (ABS_X, (&swmouse[dev])->idev->absbit);
+      set_bit (ABS_Y, (&swmouse[dev])->idev->absbit);
 
       /* set bits for mouse-buttons */
       set_bit (BTN_LEFT, (&swmouse[dev])->idev->keybit);
@@ -562,6 +555,13 @@ swm_write (struct file * filp, const char *buf, size_t count, loff_t * offp)
 	nrs = 1;
       (&swmouse[dev])->rights += nrs;
       direction = REL_X;
+      pix = nrs;
+      break;
+
+      /* wheel */
+    case 'w':
+    case 'W':
+      direction = REL_WHEEL;
       pix = nrs;
       break;
 
