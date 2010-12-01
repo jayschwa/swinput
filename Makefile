@@ -1,4 +1,4 @@
-VERSION := 0.7.4
+VERSION := 0.7.5
 KDIR   := /lib/modules/$(shell uname -r)/build
 PWD    := $(shell pwd)
 KBUILD := $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src
