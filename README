@@ -58,8 +58,6 @@ u nr        Moves the mouse up <nr> pixels
 d nr        Moves the mouse down <nr> pixels	           
 l nr        Moves the mouse left <nr> pixels	           
 r nr        Moves the mouse right <nr> pixels	           
-x nr        Moves the mouse to x position=<nr> (untested)
-y nr        Moves the mouse to y position=<nr> (untested)
 0           Moves to origin and resets stats
 
 

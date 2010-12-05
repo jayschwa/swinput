@@ -1,6 +1,6 @@
 TODO
 
-Fix existing commands. Mouse movement stuff doesn't appear to be working.
+Create a third device for absolute positioning (swtablet, swtouchscreen?).
 
 Add support for left vs right modifiers.
 

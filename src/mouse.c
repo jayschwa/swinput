@@ -200,7 +200,8 @@ init_module (void)
       /* set event-bits */
       set_bit (EV_KEY, (&swmouse[dev])->idev->evbit);
       set_bit (EV_REL, (&swmouse[dev])->idev->evbit);
-      set_bit (EV_ABS, (&swmouse[dev])->idev->evbit);
+      /* X server cannot deal with both relative and absolute axes */
+//    set_bit (EV_ABS, (&swmouse[dev])->idev->evbit);
 
       set_bit (REL_X, (&swmouse[dev])->idev->relbit);
       set_bit (REL_Y, (&swmouse[dev])->idev->relbit);
