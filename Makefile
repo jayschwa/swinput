@@ -1,10 +1,12 @@
 VERSION := 0.7.5
 KDIR   := /lib/modules/$(shell uname -r)/build
-PWD    := $(shell pwd)
-KBUILD := $(MAKE) -C $(KDIR) SUBDIRS=$(PWD)/src
+KBUILD := $(MAKE) -C $(KDIR) SUBDIRS=$(shell pwd)/src
 
 PHONY += default
-default:
+default: build
+
+PHONY += build
+build:
 	cd src && $(KBUILD) modules
 
 PHONY += clean
@@ -31,22 +33,21 @@ PHONY += dist
 dist:
 	make clean
 	mkdir -p swinput-$(VERSION)/
-	rm -fr swinput-$(VERSION)/*
+	rm -rf swinput-$(VERSION)/*
 	mkdir -p swinput-$(VERSION)/src 
 	mkdir -p swinput-$(VERSION)/test
 	mkdir -p swinput-$(VERSION)/test/data/swkeybd
 	mkdir -p swinput-$(VERSION)/test/data/swmouse
 	mkdir -p swinput-$(VERSION)/test/bc
-	cp   ChangeLog COPYING README  Makefile swinput-$(VERSION)/
-	cp   test/*.sh swinput-$(VERSION)/test/
-	cp   test/bc/*.bc swinput-$(VERSION)/test/bc/
-	cp   test/data/swkeybd/*.txt swinput-$(VERSION)/test/data/swkeybd
-	-cp   test/data/swmouse/*.txt swinput-$(VERSION)/test/data/swmouse
-	cp   src/*.c src/*.h swinput-$(VERSION)/src/
-	cp   src/Makefile swinput-$(VERSION)/src/
-	rm -f swinput-$(VERSION).tar swinput-$(VERSION).tar.gz
-	tar cvf swinput-$(VERSION).tar   swinput-$(VERSION)/
-	gzip swinput-$(VERSION).tar 
-	gpg -b swinput-$(VERSION).tar.gz
+	cp COPYING README Makefile swinput-$(VERSION)/
+	cp test/*.sh swinput-$(VERSION)/test/
+	cp test/bc/*.bc swinput-$(VERSION)/test/bc/
+	cp test/data/swkeybd/*.txt swinput-$(VERSION)/test/data/swkeybd
+	-cp test/data/swmouse/*.txt swinput-$(VERSION)/test/data/swmouse
+	cp src/*.c src/*.h swinput-$(VERSION)/src/
+	cp src/Makefile swinput-$(VERSION)/src/
+	rm -f swinput-$(VERSION).tar.gz
+	tar czvf swinput-$(VERSION).tar.gz swinput-$(VERSION)/
+	-gpg -b swinput-$(VERSION).tar.gz
 
 .PHONY: $(PHONY)
