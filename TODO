@@ -2,8 +2,6 @@ TODO
 
 Create a third device for absolute positioning (swtablet, swtouchscreen?).
 
-Add support for left vs right modifiers.
-
 Add auto-shifting for symbols and special characters.
 
 Update and fix documentation.

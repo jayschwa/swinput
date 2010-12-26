@@ -357,9 +357,17 @@ fake_esc (char *str, int str_length)
     {
       swkeybd_key (KEY_BACKSPACE);
     }
+  else if (strncmp (str, "DELETE", str_length) == 0)
+    {
+      swkeybd_key (KEY_DELETE);
+    }
   else if (strncmp (str, "ENTER", str_length) == 0)
     {
       swkeybd_key (KEY_ENTER);
+    }
+  else if (strncmp (str, "ESC", str_length) == 0)
+    {
+      swkeybd_key (KEY_ESC);
     }
   else if (strncmp (str, "SPACE", str_length) == 0)
     {
@@ -373,60 +381,121 @@ fake_esc (char *str, int str_length)
     {
       swkeybd_key (KEY_DOT);
     }
-  else if (strncmp (str, "KEY_LEFT", str_length) == 0)
+  else if (strncmp (str, "LEFT", str_length) == 0)
     {
       swkeybd_key (KEY_LEFT);
     }
-  else if (strncmp (str, "KEY_RIGHT", str_length) == 0)
+  else if (strncmp (str, "RIGHT", str_length) == 0)
     {
       swkeybd_key (KEY_RIGHT);
     }
-  else if (strncmp (str, "KEY_DOWN", str_length) == 0)
+  else if (strncmp (str, "DOWN", str_length) == 0)
     {
       swkeybd_key (KEY_DOWN);
     }
-  else if (strncmp (str, "KEY_UP", str_length) == 0)
+  else if (strncmp (str, "UP", str_length) == 0)
     {
       swkeybd_key (KEY_UP);
     }
-  else if (strncmp (str, "ALT_DOWN", str_length) == 0)
+  else if (strncmp (str, "PAGEDOWN", str_length) == 0)
+    {
+      swkeybd_key (KEY_PAGEDOWN);
+    }
+  else if (strncmp (str, "PAGEUP", str_length) == 0)
+    {
+      swkeybd_key (KEY_PAGEUP);
+    }
+  else if (strncmp (str, "KPDOT", str_length) == 0)
+    {
+      swkeybd_key (KEY_KPDOT);
+    }
+  else if (strncmp (str, "KPSLASH", str_length) == 0)
+    {
+      swkeybd_key (KEY_KPSLASH);
+    }
+  else if (strncmp (str, "ALT_DOWN", str_length) == 0 ||
+	   strncmp (str, "LEFTALT_DOWN", str_length) == 0)
     {
       swkeybd_keyPress (KEY_LEFTALT);
     }
-  else if (strncmp (str, "ALT_UP", str_length) == 0)
+  else if (strncmp (str, "ALT_UP", str_length) == 0 ||
+	   strncmp (str, "LEFTALT_UP", str_length) == 0)
     {
       swkeybd_keyRelease (KEY_LEFTALT);
     }
-  else if (strncmp (str, "ALT", str_length) == 0)
+  else if (strncmp (str, "ALT", str_length) == 0 ||
+	   strncmp (str, "LEFTALT", str_length) == 0)
     {
       swkeybd_key (KEY_LEFTALT);
     }
+  else if (strncmp (str, "RIGHTALT_DOWN", str_length) == 0)
+    {
+      swkeybd_keyPress (KEY_RIGHTALT);
+    }
+  else if (strncmp (str, "RIGHTALT_UP", str_length) == 0)
+    {
+      swkeybd_keyRelease (KEY_RIGHTALT);
+    }
+  else if (strncmp (str, "RIGHTALT", str_length) == 0)
+    {
+      swkeybd_key (KEY_RIGHTALT);
+    }
   else if (strncmp (str, "CONTROL_DOWN", str_length) == 0 ||
-	   strncmp (str, "CTRL_DOWN", str_length) == 0)
+	   strncmp (str, "CTRL_DOWN", str_length) == 0 ||
+	   strncmp (str, "LEFTCTRL_DOWN", str_length) == 0)
     {
       swkeybd_keyPress (KEY_LEFTCTRL);
     }
   else if (strncmp (str, "CONTROL_UP", str_length) == 0 ||
-	   strncmp (str, "CTRL_UP", str_length) == 0)
+	   strncmp (str, "CTRL_UP", str_length) == 0 ||
+	   strncmp (str, "LEFTCTRL_UP", str_length) == 0)
     {
       swkeybd_keyRelease (KEY_LEFTCTRL);
     }
   else if (strncmp (str, "CONTROL", str_length) == 0 ||
-	   strncmp (str, "CTRL", str_length) == 0)
+	   strncmp (str, "CTRL", str_length) == 0 ||
+	   strncmp (str, "LEFTCTRL", str_length) == 0)
     {
       swkeybd_key (KEY_LEFTCTRL);
     }
-  else if (strncmp (str, "SHIFT_DOWN", str_length) == 0)
+  else if (strncmp (str, "RIGHTCTRL_DOWN", str_length) == 0)
+    {
+      swkeybd_keyPress (KEY_RIGHTCTRL);
+    }
+  else if (strncmp (str, "RIGHTCTRL_UP", str_length) == 0)
+    {
+      swkeybd_keyRelease (KEY_RIGHTCTRL);
+    }
+  else if (strncmp (str, "RIGHTCTRL", str_length) == 0)
+    {
+      swkeybd_key (KEY_RIGHTCTRL);
+    }
+  else if (strncmp (str, "SHIFT_DOWN", str_length) == 0 ||
+	   strncmp (str, "LEFTSHIFT_DOWN", str_length) == 0)
     {
       swkeybd_keyPress (KEY_LEFTSHIFT);
     }
-  else if (strncmp (str, "SHIFT_UP", str_length) == 0)
+  else if (strncmp (str, "SHIFT_UP", str_length) == 0 ||
+	   strncmp (str, "LEFTSHIFT_UP", str_length) == 0)
     {
       swkeybd_keyRelease (KEY_LEFTSHIFT);
     }
-  else if (strncmp (str, "SHIFT", str_length) == 0)
+  else if (strncmp (str, "SHIFT", str_length) == 0 ||
+	   strncmp (str, "LEFTSHIFT", str_length) == 0)
     {
       swkeybd_key (KEY_LEFTSHIFT);
+    }
+  else if (strncmp (str, "RIGHTSHIFT_DOWN", str_length) == 0)
+    {
+      swkeybd_keyPress (KEY_RIGHTSHIFT);
+    }
+  else if (strncmp (str, "RIGHTSHIFT_UP", str_length) == 0)
+    {
+      swkeybd_keyRelease (KEY_RIGHTSHIFT);
+    }
+  else if (strncmp (str, "RIGHTSHIFT", str_length) == 0)
+    {
+      swkeybd_key (KEY_RIGHTSHIFT);
     }
   else if (strncmp (str, "clear", str_length) == 0)
     {
@@ -591,24 +660,25 @@ init_keycodes (void)
   set_keycodes ('9', KEY_9);
 
   /* specials ..... */
-  set_keycodes (':', KEY_SEMICOLON);
+  set_keycodes ('`', KEY_GRAVE);
+  set_keycodes ('\'', KEY_APOSTROPHE);
+  set_keycodes (';', KEY_SEMICOLON);
+  set_keycodes ('/', KEY_SLASH);
+  set_keycodes ('\\', KEY_BACKSLASH);
   set_keycodes (' ', KEY_SPACE);
-  set_keycodes ('-', KEY_KPMINUS);
-  set_keycodes ('+', KEY_KPPLUS);
+  set_keycodes ('-', KEY_MINUS);
   set_keycodes ('=', KEY_EQUAL);
   set_keycodes (',', KEY_COMMA);
   set_keycodes ('.', KEY_DOT);
+  set_keycodes ('[', KEY_LEFTBRACE);
+  set_keycodes (']', KEY_RIGHTBRACE);
+  set_keycodes ('\t', KEY_TAB);
 
   /* just set them.... */
-  set_bit (KEY_SEMICOLON, swkeybd.idev->keybit);
-  set_bit (KEY_SPACE, swkeybd.idev->keybit);
-  set_bit (KEY_LEFTBRACE, swkeybd.idev->keybit);
-  set_bit (KEY_RIGHTBRACE, swkeybd.idev->keybit);
   set_bit (KEY_BACKSPACE, swkeybd.idev->keybit);
-
+  set_bit (KEY_DELETE, swkeybd.idev->keybit);
   set_bit (KEY_ENTER, swkeybd.idev->keybit);
   set_bit (KEY_ESC, swkeybd.idev->keybit);
-  set_bit (KEY_TAB, swkeybd.idev->keybit);
 
   set_bit (KEY_LEFTSHIFT, swkeybd.idev->keybit);
   set_bit (KEY_RIGHTSHIFT, swkeybd.idev->keybit);
@@ -618,9 +688,6 @@ init_keycodes (void)
   set_bit (KEY_RIGHTALT, swkeybd.idev->keybit);
 
   set_bit (KEY_CAPSLOCK, swkeybd.idev->keybit);
-  set_bit (KEY_APOSTROPHE, swkeybd.idev->keybit);
-  set_bit (KEY_GRAVE, swkeybd.idev->keybit);
-  set_bit (KEY_SLASH, swkeybd.idev->keybit);
 
   set_bit (KEY_F1, swkeybd.idev->keybit);
   set_bit (KEY_F2, swkeybd.idev->keybit);
@@ -647,9 +714,11 @@ init_keycodes (void)
   set_bit (KEY_RIGHT, swkeybd.idev->keybit);
   set_bit (KEY_UP, swkeybd.idev->keybit);
   set_bit (KEY_DOWN, swkeybd.idev->keybit);
+  set_bit (KEY_PAGEDOWN, swkeybd.idev->keybit);
+  set_bit (KEY_PAGEUP, swkeybd.idev->keybit);
 
-  set_bit (KEY_LEFTBRACE, swkeybd.idev->keybit);
-  set_bit (KEY_RIGHTBRACE, swkeybd.idev->keybit);
+  set_bit (KEY_KPDOT, swkeybd.idev->keybit);
+  set_bit (KEY_KPSLASH, swkeybd.idev->keybit);
 }
 
 /* file operation-handlers for /dev/swkeybd */

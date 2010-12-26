@@ -73,15 +73,15 @@ Option           Interpretation
 ---------        ---------------------------------
 str              The string 'str' is typed by the faked keyboard
 [Fx]             The key Fx (e.g F2) is pressed. x can be 1-20
-[KEY_BACKSPACE]  Backspace is typed 
-[KEY_ENTER]      Enter is typed
-[KEY_SPACE]      Space is typed
-[KEY_COMMA]      , is typed
-[KEY_DOT]        . is typed
-[KEY_LEFT]       Left (arrow) key is typed
-[KEY_RIGHT]      Right (arrow) key is typed
-[KEY_DOWN]       Down (arrow) key is typed
-[KEY_UP]         Up (arrow) key is typed
+[BACKSPACE]      Backspace is typed
+[ENTER]          Enter is typed
+[SPACE]          Space is typed
+[COMMA]          , is typed
+[DOT]            . is typed
+[LEFT]           Left (arrow) key is typed
+[RIGHT]          Right (arrow) key is typed
+[DOWN]           Down (arrow) key is typed
+[UP]             Up (arrow) key is typed
 
 
 4 Usage staticstics
