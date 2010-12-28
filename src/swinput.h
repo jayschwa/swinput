@@ -1,9 +1,7 @@
 #ifndef _SWINPUT_H
 #define _SWINPUT_H
 
-
-void logger (int detail, char *progname, const char *func, int line,
-	     char *logmsg, ...);
+#define logger(...)
 
 /*
  * Simple debug macros, switch them on by defining SWINPUT_DEBUG
