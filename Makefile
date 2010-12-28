@@ -1,29 +1,36 @@
-VERSION := 0.7.5
-KDIR   := /lib/modules/$(shell uname -r)/build
-KBUILD := $(MAKE) -C $(KDIR) SUBDIRS=$(shell pwd)/src
+VERSION = 0.7.5
+KDIR   := /lib/modules/$(shell uname -r)
+KBUILD := $(MAKE) -C $(KDIR)/build M=$(shell pwd)/src
+MODULES = src/swkeybd.ko src/swmouse.ko
+
+DEPMOD   = depmod
+MODPROBE = modprobe
 
 PHONY += default
-default: build
+default: $(MODULES)
 
-PHONY += build
-build:
-	cd src && $(KBUILD) modules
+%.ko: %.c src/swinput.h Makefile
+	$(KBUILD) modules
 
 PHONY += clean
 clean:
-	cd src && $(KBUILD) clean
+	$(KBUILD) clean
 
 PHONY += install
-install: default
-	cd src && $(KBUILD) modules_install && depmod -a
-
-PHONY += try
-try:
-	-sudo rmmod swmouse 
-	-sudo rmmod swkeybd
-	sudo insmod src/swmouse.ko && sudo insmod src/swkeybd.ko
+install: $(MODULES)
+	-$(MODPROBE) --quiet --remove swkeybd swmouse
+	$(KBUILD) modules_install
+	$(DEPMOD) --all
+	$(MODPROBE) swkeybd
+	$(MODPROBE) swmouse
 	sleep 1
-	sudo chmod a+rw /dev/swkeybd /dev/swmouse0
+	chmod a+w /dev/swkeybd /dev/swmouse*
+
+PHONY += uninstall
+uninstall:
+	-$(MODPROBE) --quiet --remove swkeybd swmouse
+	cd $(KDIR)/extra && rm -f $(notdir $(MODULES))
+	$(DEPMOD) --all
 
 PHONY += check
 check:
